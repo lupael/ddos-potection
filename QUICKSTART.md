@@ -152,6 +152,46 @@ Copy and paste the generated commands into your Juniper router.
    - URL: `http://prometheus:9090`
 5. Import dashboards from `docs/grafana/`
 
+## Step 8: (Optional) Setup BGP Blackholing
+
+For advanced DDoS mitigation using BGP-based traffic dropping:
+
+1. **Check if you need BGP blackholing**:
+   - Do you have a BGP session with your upstream ISP?
+   - Does your ISP support RTBH (blackhole community)?
+   - If yes, continue. If no, skip this section.
+
+2. **See complete BGP setup guide**:
+   ```bash
+   # Read the comprehensive BGP documentation
+   cat docs/BGP-RTBH.md
+   ```
+
+3. **Quick BGP Setup** (ExaBGP example):
+   ```bash
+   # Install ExaBGP
+   pip3 install exabgp
+   
+   # Configure (see docs/BGP-RTBH.md for details)
+   sudo cp docs/examples/exabgp.conf /etc/exabgp/
+   
+   # Enable in platform
+   echo "BGP_ENABLED=true" >> backend/.env
+   echo "BGP_DAEMON=exabgp" >> backend/.env
+   
+   # Restart backend
+   docker-compose restart backend
+   ```
+
+4. **Test BGP blackhole**:
+   ```bash
+   # Use the example script
+   python3 scripts/bgp_blackhole_example.py trigger \
+     --ip 192.0.2.100 --alert-id 1 --duration 60
+   ```
+
+For complete BGP setup instructions, see [BGP-RTBH.md](docs/BGP-RTBH.md).
+
 ## Troubleshooting
 
 ### Services Not Starting

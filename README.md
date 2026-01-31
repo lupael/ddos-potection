@@ -13,7 +13,7 @@ A comprehensive, full-stack DDoS protection platform designed for Internet Servi
 ### Mitigation & Automation
 - **Automated Firewall Rules**: Support for iptables/nftables
 - **MikroTik API Integration**: Direct router control for rule deployment
-- **BGP Blackholing (RTBH)**: Announce blackhole routes for attack traffic
+- **BGP Blackholing (RTBH)**: Announce blackhole routes for attack traffic (supports ExaBGP, FRR, BIRD)
 - **FlowSpec Support**: Send FlowSpec announcements to BGP routers
 - **Custom Rule Engine**: Define rate limits, IP blocks, protocol filters, and geo-blocking
 
