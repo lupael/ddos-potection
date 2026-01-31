@@ -2,11 +2,42 @@
 Mitigation automation service
 """
 import subprocess
+import re
 from datetime import datetime
 
 from database import SessionLocal
 from models.models import MitigationAction, Alert
 from config import settings
+
+def validate_prefix(prefix: str) -> bool:
+    """Validate that prefix is a valid IPv4 or IPv6 CIDR notation
+    
+    Args:
+        prefix: IP prefix in CIDR notation (e.g., "192.0.2.1/32")
+    
+    Returns:
+        True if valid, False otherwise
+    """
+    # IPv4 CIDR pattern
+    ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$'
+    # IPv6 CIDR pattern
+    ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}/\d{1,3}$'
+    
+    if re.match(ipv4_pattern, prefix):
+        # Validate IPv4 octets and prefix length
+        parts = prefix.split('/')
+        octets = parts[0].split('.')
+        prefix_len = int(parts[1])
+        
+        if all(0 <= int(octet) <= 255 for octet in octets) and 0 <= prefix_len <= 32:
+            return True
+    elif re.match(ipv6_pattern, prefix):
+        # Basic IPv6 validation (prefix length)
+        parts = prefix.split('/')
+        prefix_len = int(parts[1])
+        return 0 <= prefix_len <= 128
+    
+    return False
 
 class MitigationService:
     def __init__(self):
@@ -151,10 +182,16 @@ class MitigationService:
     def _announce_bird(self, prefix: str, nexthop: str) -> bool:
         """Announce via BIRD"""
         try:
+            # Validate prefix to prevent command injection
+            if not validate_prefix(prefix):
+                print(f"BIRD error: Invalid prefix format: {prefix}")
+                return False
+            
             # For BIRD, we need to add route dynamically using birdc
             # Note: This requires BIRD configuration to allow dynamic routes
             # via the blackhole_routes protocol
-            cmd = ['birdc', '-r', f'add route {prefix} blackhole']
+            # Using list form prevents shell injection
+            cmd = ['birdc', '-r', 'add', 'route', prefix, 'blackhole']
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             if result.returncode == 0 or 'already exists' in result.stdout.lower():
@@ -228,8 +265,14 @@ class MitigationService:
     def _withdraw_bird(self, prefix: str) -> bool:
         """Withdraw via BIRD"""
         try:
+            # Validate prefix to prevent command injection
+            if not validate_prefix(prefix):
+                print(f"BIRD error: Invalid prefix format: {prefix}")
+                return False
+            
             # Remove the route dynamically using birdc
-            cmd = ['birdc', '-r', f'delete route {prefix}']
+            # Using list form prevents shell injection
+            cmd = ['birdc', '-r', 'delete', 'route', prefix]
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             if result.returncode == 0 or 'not found' in result.stdout.lower():

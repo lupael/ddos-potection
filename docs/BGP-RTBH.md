@@ -420,15 +420,17 @@ def _announce_bird(self, prefix: str, nexthop: str) -> bool:
     from config import settings
     import subprocess
     
-    # Add route to blackhole protocol
-    cmd = [
-        'birdc',
-        'configure',
-        f'"protocol static blackhole_routes {{ ipv4; route {prefix} blackhole; }}"'
-    ]
+    # Validate prefix format
+    if not self._validate_prefix(prefix):
+        print(f"BIRD error: Invalid prefix format: {prefix}")
+        return False
     
-    result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-    if result.returncode == 0:
+    # Add route dynamically using birdc
+    # Safe command construction without shell=True
+    cmd = ['birdc', '-r', 'add', 'route', prefix, 'blackhole']
+    
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    if result.returncode == 0 or 'already exists' in result.stdout.lower():
         print(f"BGP blackhole announced via BIRD: {prefix}")
         return True
     else:
