@@ -5,6 +5,15 @@ All notable changes to the DDoS Protection Platform will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2024-01-31
+
+### Security
+- **CRITICAL**: Updated `fastapi` from 0.109.0 to 0.109.1 to fix Content-Type Header ReDoS vulnerability
+- **CRITICAL**: Updated `python-multipart` from 0.0.6 to 0.0.22 to fix:
+  - Arbitrary File Write vulnerability
+  - Denial of Service via malformed multipart/form-data boundary
+  - Content-Type Header ReDoS vulnerability
+
 ## [1.0.0] - 2024-01-31
 
 ### Added

@@ -2,6 +2,27 @@
 
 This document provides a security assessment of the DDoS Protection Platform implementation.
 
+## Security Updates
+
+### Latest Security Patches (2024-01-31)
+
+**Fixed Vulnerabilities**:
+1. **FastAPI Content-Type Header ReDoS**
+   - Affected: fastapi <= 0.109.0
+   - Fixed: Updated to fastapi 0.109.1
+   - Severity: Medium
+   - CVE: Duplicate Advisory
+
+2. **Python-Multipart Multiple Vulnerabilities**
+   - Affected: python-multipart <= 0.0.6
+   - Fixed: Updated to python-multipart 0.0.22
+   - Issues fixed:
+     - Arbitrary File Write via Non-Default Configuration
+     - Denial of Service via malformed multipart/form-data boundary
+     - Content-Type Header ReDoS
+   - Severity: High
+   - CVE: Multiple
+
 ## Security Features Implemented
 
 ### Authentication & Authorization
