@@ -112,7 +112,7 @@ async def execute_mitigation(
             if prefix:
                 success = service.announce_bgp_blackhole(prefix, nexthop)
             else:
-                error_message = "Missing 'prefix' in mitigation details"
+                error_message = "BGP blackhole requires a 'prefix' in CIDR notation (e.g., 192.0.2.1/32) in mitigation details"
         
         elif mitigation.action_type == "flowspec":
             # Send FlowSpec update

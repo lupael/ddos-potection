@@ -52,7 +52,17 @@ class BGPBlackholeClient:
         Returns:
             Mitigation ID if successful, None otherwise
         """
-        prefix = f"{ip_address}/32"
+        # Determine if IPv4 or IPv6 and use appropriate prefix length
+        import ipaddress
+        try:
+            ip = ipaddress.ip_address(ip_address)
+            if isinstance(ip, ipaddress.IPv4Address):
+                prefix = f"{ip_address}/32"
+            else:  # IPv6
+                prefix = f"{ip_address}/128"
+        except ValueError:
+            print(f"✗ Invalid IP address format: {ip_address}")
+            return None
         
         print(f"🚫 Triggering BGP blackhole for {prefix}...")
         

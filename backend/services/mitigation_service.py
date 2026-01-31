@@ -2,7 +2,7 @@
 Mitigation automation service
 """
 import subprocess
-import re
+import ipaddress
 from datetime import datetime
 
 from database import SessionLocal
@@ -13,31 +13,17 @@ def validate_prefix(prefix: str) -> bool:
     """Validate that prefix is a valid IPv4 or IPv6 CIDR notation
     
     Args:
-        prefix: IP prefix in CIDR notation (e.g., "192.0.2.1/32")
+        prefix: IP prefix in CIDR notation (e.g., "192.0.2.1/32" or "2001:db8::1/128")
     
     Returns:
         True if valid, False otherwise
     """
-    # IPv4 CIDR pattern
-    ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$'
-    # IPv6 CIDR pattern
-    ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}/\d{1,3}$'
-    
-    if re.match(ipv4_pattern, prefix):
-        # Validate IPv4 octets and prefix length
-        parts = prefix.split('/')
-        octets = parts[0].split('.')
-        prefix_len = int(parts[1])
-        
-        if all(0 <= int(octet) <= 255 for octet in octets) and 0 <= prefix_len <= 32:
-            return True
-    elif re.match(ipv6_pattern, prefix):
-        # Basic IPv6 validation (prefix length)
-        parts = prefix.split('/')
-        prefix_len = int(parts[1])
-        return 0 <= prefix_len <= 128
-    
-    return False
+    try:
+        # Use ipaddress module for proper validation
+        ipaddress.ip_network(prefix, strict=False)
+        return True
+    except (ValueError, AttributeError):
+        return False
 
 class MitigationService:
     def __init__(self):
@@ -144,9 +130,22 @@ class MitigationService:
     def _announce_exabgp(self, prefix: str, nexthop: str) -> bool:
         """Announce via ExaBGP"""
         try:
+            # Validate prefix and nexthop to prevent command injection
+            if not validate_prefix(prefix):
+                print(f"ExaBGP error: Invalid prefix format: {prefix}")
+                return False
+            
+            # Validate nexthop is a valid IP address
+            try:
+                ipaddress.ip_address(nexthop)
+            except ValueError:
+                print(f"ExaBGP error: Invalid nexthop format: {nexthop}")
+                return False
+            
             cmd_pipe = getattr(settings, 'EXABGP_CMD_PIPE', '/var/run/exabgp.cmd')
             community = getattr(settings, 'BGP_BLACKHOLE_COMMUNITY', '65535:666')
             
+            # Write validated command to ExaBGP pipe
             with open(cmd_pipe, 'a') as f:
                 f.write(f'announce route {prefix} next-hop {nexthop} community [{community}]\n')
             
@@ -159,6 +158,11 @@ class MitigationService:
     def _announce_frr(self, prefix: str, nexthop: str) -> bool:
         """Announce via FRR (Free Range Routing)"""
         try:
+            # Validate prefix to prevent command injection
+            if not validate_prefix(prefix):
+                print(f"FRR error: Invalid prefix format: {prefix}")
+                return False
+            
             vtysh_cmd = getattr(settings, 'FRR_VTYSH_CMD', '/usr/bin/vtysh')
             
             # Add static route with tag 666 (matches route-map for RTBH)
