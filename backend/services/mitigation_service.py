@@ -359,27 +359,311 @@ class MitigationService:
             return False
     
     def send_flowspec_rule(self, source: str = None, dest: str = None, 
-                          protocol: str = None, action: str = "drop") -> bool:
-        """Send FlowSpec announcement"""
+                          protocol: str = None, action: str = "drop",
+                          source_port: int = None, dest_port: int = None,
+                          packet_length: str = None, dscp: int = None,
+                          fragment: str = None, tcp_flags: str = None) -> bool:
+        """Send FlowSpec announcement to BGP daemon
+        
+        Args:
+            source: Source IP prefix (CIDR notation, e.g., "192.0.2.0/24")
+            dest: Destination IP prefix (CIDR notation)
+            protocol: IP protocol (tcp, udp, icmp, or protocol number)
+            action: Action to take (drop, rate-limit)
+            source_port: Source port number or range
+            dest_port: Destination port number or range
+            packet_length: Packet length (e.g., ">=64&<=128")
+            dscp: DSCP value
+            fragment: Fragment type (not-a-fragment, is-fragment, first-fragment, last-fragment)
+            tcp_flags: TCP flags (syn, ack, fin, rst, push, urgent)
+        
+        Returns:
+            True if successful, False otherwise
+        
+        Note:
+            FlowSpec requires BGP FlowSpec-capable routers and upstream support.
+            See RFC 5575 for FlowSpec specification.
+        """
         try:
-            # FlowSpec requires BGP FlowSpec capable router
-            # This would integrate with BGP daemon
+            # Check if BGP is enabled
+            bgp_enabled = getattr(settings, 'BGP_ENABLED', False)
+            if not bgp_enabled:
+                print("FlowSpec is disabled. Set BGP_ENABLED=true in configuration.")
+                return False
             
-            flowspec_rule = {
-                'source': source,
-                'destination': dest,
-                'protocol': protocol,
-                'action': action
-            }
+            # Validate inputs to prevent injection
+            if source and not validate_prefix(source):
+                print(f"FlowSpec error: Invalid source prefix: {source}")
+                return False
+            if dest and not validate_prefix(dest):
+                print(f"FlowSpec error: Invalid destination prefix: {dest}")
+                return False
             
-            # Example: send to ExaBGP
-            with open('/var/run/exabgp.cmd', 'a') as f:
-                f.write(f'announce flow route {flowspec_rule}\n')
+            # Get BGP daemon
+            bgp_daemon = getattr(settings, 'BGP_DAEMON', 'exabgp')
             
-            return True
+            if bgp_daemon == 'exabgp':
+                return self._send_flowspec_exabgp(
+                    source, dest, protocol, action, source_port, dest_port,
+                    packet_length, dscp, fragment, tcp_flags
+                )
+            elif bgp_daemon == 'frr':
+                return self._send_flowspec_frr(
+                    source, dest, protocol, action, source_port, dest_port
+                )
+            elif bgp_daemon == 'bird':
+                print("FlowSpec is not yet implemented for BIRD daemon")
+                return False
+            else:
+                print(f"Unknown BGP daemon: {bgp_daemon}")
+                return False
             
         except Exception as e:
             print(f"Error sending FlowSpec rule: {e}")
+            return False
+    
+    def _send_flowspec_exabgp(self, source: str, dest: str, protocol: str,
+                              action: str, source_port: int, dest_port: int,
+                              packet_length: str, dscp: int, fragment: str,
+                              tcp_flags: str) -> bool:
+        """Send FlowSpec via ExaBGP"""
+        try:
+            cmd_pipe = getattr(settings, 'EXABGP_CMD_PIPE', '/var/run/exabgp.cmd')
+            
+            # Build FlowSpec rule
+            flow_parts = []
+            
+            # Destination prefix (required)
+            if dest:
+                flow_parts.append(f"destination {dest}")
+            else:
+                print("FlowSpec error: Destination prefix is required")
+                return False
+            
+            # Source prefix (optional)
+            if source:
+                flow_parts.append(f"source {source}")
+            
+            # Protocol (optional)
+            if protocol:
+                # Map protocol names to numbers
+                protocol_map = {
+                    'tcp': '6',
+                    'udp': '17',
+                    'icmp': '1',
+                    'gre': '47',
+                    'esp': '50',
+                    'ah': '51'
+                }
+                proto_num = protocol_map.get(protocol.lower(), protocol)
+                flow_parts.append(f"protocol [ ={proto_num} ]")
+            
+            # Port specifications
+            if source_port:
+                flow_parts.append(f"source-port [ ={source_port} ]")
+            if dest_port:
+                flow_parts.append(f"destination-port [ ={dest_port} ]")
+            
+            # Packet length
+            if packet_length:
+                flow_parts.append(f"packet-length [ {packet_length} ]")
+            
+            # DSCP
+            if dscp is not None:
+                flow_parts.append(f"dscp [ ={dscp} ]")
+            
+            # Fragment
+            if fragment:
+                fragment_map = {
+                    'not-a-fragment': 'not-a-fragment',
+                    'is-fragment': 'is-fragment',
+                    'first-fragment': 'first-fragment',
+                    'last-fragment': 'last-fragment'
+                }
+                if fragment in fragment_map:
+                    flow_parts.append(f"fragment [ {fragment_map[fragment]} ]")
+            
+            # TCP flags
+            if tcp_flags:
+                flow_parts.append(f"tcp-flags [ {tcp_flags} ]")
+            
+            # Build command
+            flow_rule = " ".join(flow_parts)
+            
+            # Action (community or rate-limit extended community)
+            if action == "drop":
+                # Use traffic-rate 0 for drop
+                action_spec = "rate-limit 0"
+            elif action.startswith("rate-limit"):
+                # Extract rate if specified
+                action_spec = action
+            else:
+                action_spec = "rate-limit 0"
+            
+            # Use non-blocking write
+            try:
+                fd = os.open(cmd_pipe, os.O_WRONLY | os.O_NONBLOCK)
+                try:
+                    command = f"announce flow route {flow_rule} {action_spec}\n"
+                    os.write(fd, command.encode())
+                    print(f"FlowSpec rule announced via ExaBGP: {flow_rule}")
+                    return True
+                finally:
+                    os.close(fd)
+            except OSError as e:
+                if e.errno == errno.ENXIO:
+                    print("FlowSpec error: ExaBGP not running")
+                else:
+                    print(f"FlowSpec error: Failed to write to pipe: {e}")
+                return False
+            
+        except Exception as e:
+            print(f"FlowSpec ExaBGP error: {e}")
+            return False
+    
+    def _send_flowspec_frr(self, source: str, dest: str, protocol: str,
+                           action: str, source_port: int, dest_port: int) -> bool:
+        """Send FlowSpec via FRR
+        
+        Note: FRR FlowSpec support requires BGP flowspec address-family configuration
+        """
+        try:
+            vtysh_cmd = getattr(settings, 'FRR_VTYSH_CMD', '/usr/bin/vtysh')
+            
+            # Build FRR flowspec command
+            cmd_parts = ['configure terminal', 'router bgp']
+            
+            # FRR FlowSpec syntax
+            flowspec_cmd = 'flowspec'
+            if dest:
+                flowspec_cmd += f' destination-prefix {dest}'
+            if source:
+                flowspec_cmd += f' source-prefix {source}'
+            if protocol:
+                protocol_map = {'tcp': '6', 'udp': '17', 'icmp': '1'}
+                proto_num = protocol_map.get(protocol.lower(), protocol)
+                flowspec_cmd += f' protocol {proto_num}'
+            if dest_port:
+                flowspec_cmd += f' destination-port {dest_port}'
+            if source_port:
+                flowspec_cmd += f' source-port {source_port}'
+            
+            # Action
+            if action == "drop":
+                flowspec_cmd += ' rate-limit 0'
+            
+            cmd_parts.append(flowspec_cmd)
+            
+            # Build command
+            cmd = [vtysh_cmd]
+            for part in cmd_parts:
+                cmd.extend(['-c', part])
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                print(f"FlowSpec rule announced via FRR")
+                return True
+            else:
+                print(f"FRR FlowSpec error: {result.stderr}")
+                return False
+            
+        except Exception as e:
+            print(f"FRR FlowSpec error: {e}")
+            return False
+    
+    def withdraw_flowspec_rule(self, source: str = None, dest: str = None,
+                               protocol: str = None) -> bool:
+        """Withdraw FlowSpec rule
+        
+        Args:
+            source: Source IP prefix
+            dest: Destination IP prefix
+            protocol: IP protocol
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            bgp_daemon = getattr(settings, 'BGP_DAEMON', 'exabgp')
+            
+            if bgp_daemon == 'exabgp':
+                return self._withdraw_flowspec_exabgp(source, dest, protocol)
+            elif bgp_daemon == 'frr':
+                return self._withdraw_flowspec_frr(source, dest, protocol)
+            else:
+                print(f"FlowSpec withdrawal not implemented for {bgp_daemon}")
+                return False
+        except Exception as e:
+            print(f"Error withdrawing FlowSpec rule: {e}")
+            return False
+    
+    def _withdraw_flowspec_exabgp(self, source: str, dest: str, protocol: str) -> bool:
+        """Withdraw FlowSpec via ExaBGP"""
+        try:
+            cmd_pipe = getattr(settings, 'EXABGP_CMD_PIPE', '/var/run/exabgp.cmd')
+            
+            # Build withdrawal command
+            flow_parts = []
+            if dest:
+                flow_parts.append(f"destination {dest}")
+            if source:
+                flow_parts.append(f"source {source}")
+            if protocol:
+                protocol_map = {'tcp': '6', 'udp': '17', 'icmp': '1'}
+                proto_num = protocol_map.get(protocol.lower(), protocol)
+                flow_parts.append(f"protocol [ ={proto_num} ]")
+            
+            flow_rule = " ".join(flow_parts)
+            
+            try:
+                fd = os.open(cmd_pipe, os.O_WRONLY | os.O_NONBLOCK)
+                try:
+                    command = f"withdraw flow route {flow_rule}\n"
+                    os.write(fd, command.encode())
+                    print(f"FlowSpec rule withdrawn via ExaBGP")
+                    return True
+                finally:
+                    os.close(fd)
+            except OSError as e:
+                if e.errno == errno.ENXIO:
+                    print("FlowSpec error: ExaBGP not running")
+                else:
+                    print(f"FlowSpec error: {e}")
+                return False
+            
+        except Exception as e:
+            print(f"FlowSpec ExaBGP withdrawal error: {e}")
+            return False
+    
+    def _withdraw_flowspec_frr(self, source: str, dest: str, protocol: str) -> bool:
+        """Withdraw FlowSpec via FRR"""
+        try:
+            vtysh_cmd = getattr(settings, 'FRR_VTYSH_CMD', '/usr/bin/vtysh')
+            
+            # Build FRR flowspec withdrawal command
+            flowspec_cmd = 'no flowspec'
+            if dest:
+                flowspec_cmd += f' destination-prefix {dest}'
+            if source:
+                flowspec_cmd += f' source-prefix {source}'
+            
+            cmd = [
+                vtysh_cmd,
+                '-c', 'configure terminal',
+                '-c', 'router bgp',
+                '-c', flowspec_cmd
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                print(f"FlowSpec rule withdrawn via FRR")
+                return True
+            else:
+                print(f"FRR FlowSpec withdrawal error: {result.stderr}")
+                return False
+            
+        except Exception as e:
+            print(f"FRR FlowSpec withdrawal error: {e}")
             return False
     
     def apply_rate_limit(self, ip: str, rate: str = "1000/s") -> bool:

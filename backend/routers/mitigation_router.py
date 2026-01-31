@@ -124,7 +124,26 @@ async def execute_mitigation(
             source = mitigation.details.get('source')
             dest = mitigation.details.get('destination')
             protocol = mitigation.details.get('protocol')
-            success = service.send_flowspec_rule(source, dest, protocol)
+            action = mitigation.details.get('action', 'drop')
+            source_port = mitigation.details.get('source_port')
+            dest_port = mitigation.details.get('dest_port')
+            packet_length = mitigation.details.get('packet_length')
+            dscp = mitigation.details.get('dscp')
+            fragment = mitigation.details.get('fragment')
+            tcp_flags = mitigation.details.get('tcp_flags')
+            
+            success = service.send_flowspec_rule(
+                source=source,
+                dest=dest,
+                protocol=protocol,
+                action=action,
+                source_port=source_port,
+                dest_port=dest_port,
+                packet_length=packet_length,
+                dscp=dscp,
+                fragment=fragment,
+                tcp_flags=tcp_flags
+            )
         
         else:
             error_message = f"Unknown action type: {mitigation.action_type}"
@@ -194,8 +213,11 @@ async def stop_mitigation(
                 error_message = "Missing 'prefix' in mitigation details"
         
         elif mitigation.action_type == "flowspec":
-            # Withdraw FlowSpec rule (implementation depends on BGP daemon)
-            success = True  # Placeholder
+            # Withdraw FlowSpec rule
+            source = mitigation.details.get('source')
+            dest = mitigation.details.get('destination')
+            protocol = mitigation.details.get('protocol')
+            success = service.withdraw_flowspec_rule(source, dest, protocol)
         
         else:
             error_message = f"Unknown action type: {mitigation.action_type}"

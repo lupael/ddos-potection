@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     BIRD_CMD: str = "birdc"  # Path to birdc command
     BIRD_CONTROL_SOCKET: str = "/var/run/bird/bird.ctl"  # BIRD control socket
     
+    # GeoIP Configuration (for geo-blocking)
+    GEOIP_DATABASE_PATH: str = "/usr/share/GeoIP/GeoLite2-Country.mmdb"
+    
     class Config:
         env_file = ".env"
 
