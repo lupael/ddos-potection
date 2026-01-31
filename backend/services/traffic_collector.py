@@ -479,28 +479,37 @@ class TrafficCollector:
             db.add(traffic_log)
             db.commit()
             
-            # Redis sliding window counters for traffic analysis
-            current_time = int(datetime.now(timezone.utc).timestamp())
-            window_key = f"traffic:window:{isp_id}:{src_ip}"
+            # Update Redis sliding window counters
+            protocol = flow.get('protocol', 0)
+            src_ip = flow.get('src_ip', 'unknown')
+            dst_ip = flow.get('dst_ip', 'unknown')
+            packets = flow.get('packets', 0)
             
-            # Add to sorted set with timestamp as score
-            self.redis_client.zadd(window_key, {f"{current_time}:{packets}:{bytes_count}": current_time})
-            # Keep only last 60 seconds
-            self.redis_client.zremrangebyscore(window_key, 0, current_time - 60)
-            self.redis_client.expire(window_key, 120)
+            # Increment counters with sliding window (60 seconds)
+            current_second = int(datetime.now(timezone.utc).timestamp())
             
-            # Track SYN floods (TCP protocol = 6, SYN flag = 0x02)
-            if protocol == 6 and (tcp_flags & 0x02):
-                syn_key = f"syn_flood:{isp_id}:{src_ip}"
+            # Traffic counters
+            key_src = f"traffic:src:{isp_id}:{src_ip}:{current_second}"
+            key_dst = f"traffic:dst:{isp_id}:{dst_ip}:{current_second}"
+            key_proto = f"traffic:proto:{isp_id}:{protocol}:{current_second}"
+            
+            self.redis_client.incrby(key_src, packets)
+            self.redis_client.expire(key_src, 60)
+            
+            self.redis_client.incrby(key_dst, packets)
+            self.redis_client.expire(key_dst, 60)
+            
+            self.redis_client.incrby(key_proto, packets)
+            self.redis_client.expire(key_proto, 60)
+            
+            # SYN flag tracking for SYN flood detection (track by destination)
+            if tcp_flags_str and 'SYN' in tcp_flags_str and 'ACK' not in tcp_flags_str:
+                syn_key = f"syn:{isp_id}:{dst_ip}:{current_second}"
                 self.redis_client.incr(syn_key)
-                self.redis_client.expire(syn_key, 10)
-                
-                # Check for SYN flood threshold
-                syn_count = int(self.redis_client.get(syn_key) or 0)
-                if syn_count > 100:
-                    alert_key = f"alert:syn_flood:{src_ip}"
-                    self.redis_client.setex(alert_key, 60, syn_count)
+                self.redis_client.expire(syn_key, 60)
             
+        except Exception as e:
+            print(f"Error storing traffic: {e}")
         finally:
             db.close()
     

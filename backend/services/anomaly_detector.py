@@ -21,9 +21,6 @@ class AnomalyDetector:
             db=settings.REDIS_DB,
             decode_responses=True
         )
-        # Subscribe to Redis pub/sub for real-time events
-        self.pubsub = self.redis_client.pubsub()
-        self.pubsub.subscribe('traffic:events')
     
     def detect_syn_flood(self, isp_id: int = 1) -> bool:
         """
@@ -147,13 +144,10 @@ class AnomalyDetector:
             
             # Low source entropy + low destination entropy = distributed DDoS to single target
             if src_entropy < settings.ENTROPY_THRESHOLD and dst_entropy < 1.0:
-                top_sources = defaultdict(int)
-                for ip in source_ips:
-                    top_sources[ip] += 1
+                from collections import Counter
                 
-                top_attacker = max(top_sources.items(), key=lambda x: x[1])[0] if top_sources else 'unknown'
-                top_target = max(defaultdict(int, [(ip, source_ips.count(ip)) for ip in set(dest_ips)]).items(), 
-                               key=lambda x: x[1])[0]
+                top_attacker = Counter(source_ips).most_common(1)[0][0] if source_ips else 'unknown'
+                top_target = Counter(dest_ips).most_common(1)[0][0] if dest_ips else 'unknown'
                 
                 self.create_alert(
                     isp_id=isp_id,
@@ -167,8 +161,9 @@ class AnomalyDetector:
             
             # High source entropy + low destination entropy = volumetric attack
             elif src_entropy > 5.0 and dst_entropy < 2.0:
-                top_target = max(defaultdict(int, [(ip, dest_ips.count(ip)) for ip in set(dest_ips)]).items(), 
-                               key=lambda x: x[1])[0]
+                from collections import Counter
+                
+                top_target = Counter(dest_ips).most_common(1)[0][0] if dest_ips else 'unknown'
                 
                 self.create_alert(
                     isp_id=isp_id,
@@ -332,20 +327,6 @@ class AnomalyDetector:
             print(f"Error creating alert: {e}")
         finally:
             db.close()
-    
-    def process_realtime_stream(self):
-        """Process real-time traffic events from Redis pub/sub"""
-        print("Starting real-time stream processor...")
-        
-        for message in self.pubsub.listen():
-            if message['type'] == 'message':
-                try:
-                    event = json.loads(message['data'])
-                    # Process event for immediate threat detection
-                    # This could trigger instant alerts for critical threats
-                    
-                except Exception as e:
-                    print(f"Error processing stream message: {e}")
     
     def run_detection_loop(self):
         """Main detection loop"""
