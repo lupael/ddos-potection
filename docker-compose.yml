@@ -1,0 +1,164 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ddos-postgres
+    environment:
+      POSTGRES_DB: ddos_platform
+      POSTGRES_USER: ddos_user
+      POSTGRES_PASSWORD: ddos_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ddos-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ddos_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: ddos-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ddos-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ddos-backend
+    environment:
+      DATABASE_URL: postgresql://ddos_user:ddos_pass@postgres:5432/ddos_platform
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      HOST: 0.0.0.0
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ddos-network
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Traffic Collector Service
+  collector:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ddos-collector
+    environment:
+      DATABASE_URL: postgresql://ddos_user:ddos_pass@postgres:5432/ddos_platform
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "2055:2055/udp"  # NetFlow
+      - "6343:6343/udp"  # sFlow
+      - "4739:4739/udp"  # IPFIX
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ddos-network
+    volumes:
+      - ./backend:/app
+    command: python services/traffic_collector.py
+
+  # Anomaly Detector Service
+  detector:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ddos-detector
+    environment:
+      DATABASE_URL: postgresql://ddos_user:ddos_pass@postgres:5432/ddos_platform
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ddos-network
+    volumes:
+      - ./backend:/app
+    command: python services/anomaly_detector.py
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ddos-frontend
+    environment:
+      REACT_APP_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - ddos-network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm start
+
+  # Prometheus (monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ddos-prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - ddos-network
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  # Grafana (visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ddos-grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - ddos-network
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+networks:
+  ddos-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
