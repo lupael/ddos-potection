@@ -18,8 +18,6 @@ Real-time traffic monitoring • Anomaly detection • Automated mitigation • 
 
 ---
 
----
-
 ## 📑 Table of Contents
 
 - [Features](#-features)
