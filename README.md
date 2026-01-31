@@ -1,6 +1,40 @@
-# DDoS Protection Platform for ISPs
+<div align="center">
 
-A comprehensive, full-stack DDoS protection platform designed for Internet Service Providers (ISPs). This platform provides real-time traffic monitoring, anomaly detection, automated mitigation, and a beautiful web dashboard for managing DDoS attacks.
+# 🛡️ DDoS Protection Platform for ISPs
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![React](https://img.shields.io/badge/react-18.0+-61DAFB.svg?logo=react)](https://reactjs.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg?logo=docker)](https://www.docker.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
+
+**A comprehensive, enterprise-grade DDoS protection platform designed for Internet Service Providers (ISPs)**
+
+Real-time traffic monitoring • Anomaly detection • Automated mitigation • Beautiful web dashboard
+
+[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Screenshots](#-screenshots)
+
+</div>
+
+---
+
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Screenshots](#-screenshots)
+- [Requirements](#-requirements)
+- [Quick Start](#-quick-start)
+- [Router Integration](#-router-integration)
+- [API Documentation](#-api-documentation)
+- [Architecture](#️-architecture)
+- [Technology Stack](#-technology-stack)
+- [Security](#-security)
+- [Monitoring](#-monitoring)
+- [Testing](#-testing)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Support](#-support)
 
 ## 🚀 Features
 
@@ -37,6 +71,44 @@ A comprehensive, full-stack DDoS protection platform designed for Internet Servi
 - **Multi-channel Alerts**: Email, SMS, and Telegram notifications
 - **Live Attack Maps**: Visualize attacks in real-time
 - **Mitigation Status**: Track active and historical mitigations
+
+## 📸 Screenshots
+
+### Dashboard Overview
+<div align="center">
+
+![Dashboard](https://github.com/user-attachments/assets/477edd08-aee4-4c7a-9b7a-b07452e2252e)
+
+*Real-time monitoring dashboard showing traffic statistics, active alerts, and system health*
+
+</div>
+
+### Traffic Monitor
+<div align="center">
+
+![Traffic Monitor](https://github.com/user-attachments/assets/3b9173ed-128a-4c9f-98ef-6e81a4b6148c)
+
+*Live traffic visualization with protocol distribution and attack pattern detection*
+
+</div>
+
+### Alert Management
+<div align="center">
+
+![Alerts](https://github.com/user-attachments/assets/e3646f08-32fe-4d81-8f07-612535751de1)
+
+*Comprehensive alert dashboard with severity levels and real-time notifications*
+
+</div>
+
+### Rule Management
+<div align="center">
+
+![Rules](https://github.com/user-attachments/assets/42a87a3f-4bb7-48df-a71c-792f62c5935d)
+
+*Intuitive interface for creating and managing DDoS mitigation rules*
+
+</div>
 
 ## 📋 Requirements
 
@@ -245,6 +317,36 @@ curl -X POST http://localhost:8000/api/v1/alerts/1/resolve \
       └───────────┘ └──────────┘ └──────────┘ └────────┘
 ```
 
+## 💻 Technology Stack
+
+### Backend
+- **FastAPI** - High-performance Python web framework
+- **PostgreSQL 15** - Primary data storage
+- **Redis 7** - Real-time caching and pub/sub
+- **SQLAlchemy** - ORM for database operations
+- **Pydantic** - Data validation and settings
+- **Celery** - Distributed task queue (optional)
+
+### Frontend
+- **React 18** - Modern UI framework
+- **Chart.js** - Beautiful data visualization
+- **Axios** - HTTP client
+- **React Router** - Navigation
+- **CSS3** - Responsive styling
+
+### DevOps & Monitoring
+- **Docker & Docker Compose** - Containerization
+- **Prometheus** - Metrics collection
+- **Grafana** - Monitoring dashboards
+- **Kubernetes** - Production orchestration (optional)
+- **GitHub Actions** - CI/CD pipeline
+
+### Network Protocols
+- **NetFlow v9/v10** - Cisco traffic export
+- **sFlow** - Real-time traffic sampling
+- **IPFIX** - IP Flow Information Export
+- **BGP/ExaBGP** - Route advertisements for mitigation
+
 ## 🔒 Security
 
 - **TLS/SSL**: All communications encrypted
@@ -287,25 +389,46 @@ npm test
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting PRs.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-For support and questions:
-- GitHub Issues: https://github.com/i4edubd/ddos-potection/issues
-- Email: support@example.com
+Need help? We're here for you!
+
+- 📖 [Documentation](docs/)
+- 🐛 [GitHub Issues](https://github.com/i4edubd/ddos-potection/issues)
+- 💬 [Discussions](https://github.com/i4edubd/ddos-potection/discussions)
+- 📧 Email: support@example.com
 
 ## 🙏 Acknowledgments
 
-- FastAPI for the excellent Python web framework
-- React for the frontend framework
-- PostgreSQL and Redis for data storage
-- Prometheus and Grafana for monitoring
+Special thanks to these amazing open-source projects:
+
+- [FastAPI](https://fastapi.tiangolo.com/) - Excellent Python web framework
+- [React](https://reactjs.org/) - Modern UI framework
+- [PostgreSQL](https://www.postgresql.org/) - Robust database
+- [Redis](https://redis.io/) - Fast in-memory data store
+- [Prometheus](https://prometheus.io/) & [Grafana](https://grafana.com/) - Monitoring stack
 
 ---
 
+<div align="center">
+
+**⭐ Star this project if you find it useful! ⭐**
+
 **Made with ❤️ for ISPs worldwide**
+
+![GitHub stars](https://img.shields.io/github/stars/i4edubd/ddos-potection?style=social)
+![GitHub forks](https://img.shields.io/github/forks/i4edubd/ddos-potection?style=social)
+
+</div>
