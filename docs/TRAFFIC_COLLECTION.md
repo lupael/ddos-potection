@@ -357,11 +357,11 @@ redis-cli XLEN alerts:stream
 
 - [RFC 3954](https://www.rfc-editor.org/rfc/rfc3954) - NetFlow v9
 - [RFC 5101](https://www.rfc-editor.org/rfc/rfc5101) - IPFIX
-- [RFC 3176](https://www.rfc-editor.org/rfc/rfc3176) - sFlow
+- [sFlow v5 Specification](https://sflow.org/sflow_version_5.txt) - sFlow Version 5
 - [Redis Streams](https://redis.io/docs/data-types/streams/)
 
 ## Support
 
 For issues or questions:
-- GitHub Issues: https://github.com/i4edubd/ddos-potection/issues
+- GitHub Issues: https://github.com/i4edubd/ddos-protection/issues
 - Email: support@example.com

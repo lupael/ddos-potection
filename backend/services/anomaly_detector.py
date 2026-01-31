@@ -4,7 +4,7 @@ Anomaly detection engine for DDoS attacks
 import redis
 import time
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 from collections import defaultdict
 import math
@@ -31,7 +31,7 @@ class AnomalyDetector:
         Checks for high rate of SYN packets to specific destinations
         """
         try:
-            current_second = int(datetime.utcnow().timestamp())
+            current_second = int(datetime.now(timezone.utc).timestamp())
             detected = False
             
             # Check last 10 seconds of SYN counters
@@ -66,7 +66,7 @@ class AnomalyDetector:
     def detect_udp_flood(self, isp_id: int = 1) -> bool:
         """Detect UDP flood attacks using Redis counters"""
         try:
-            current_second = int(datetime.utcnow().timestamp())
+            current_second = int(datetime.now(timezone.utc).timestamp())
             detected = False
             
             # Check UDP traffic (protocol 17) in last 60 seconds
@@ -126,7 +126,7 @@ class AnomalyDetector:
         """Detect anomalies using multi-dimensional entropy analysis"""
         db = SessionLocal()
         try:
-            one_min_ago = datetime.utcnow() - timedelta(minutes=1)
+            one_min_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
             
             logs = db.query(TrafficLog).filter(
                 TrafficLog.isp_id == isp_id,
@@ -190,7 +190,7 @@ class AnomalyDetector:
     def detect_icmp_flood(self, isp_id: int = 1) -> bool:
         """Detect ICMP flood attacks"""
         try:
-            current_second = int(datetime.utcnow().timestamp())
+            current_second = int(datetime.now(timezone.utc).timestamp())
             detected = False
             
             # Check ICMP traffic (protocol 1) in last 60 seconds
@@ -230,7 +230,7 @@ class AnomalyDetector:
         """Detect DNS amplification attacks (high UDP port 53 traffic)"""
         db = SessionLocal()
         try:
-            one_min_ago = datetime.utcnow() - timedelta(minutes=1)
+            one_min_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
             
             from sqlalchemy import func
             # Look for high volume UDP traffic to port 53
@@ -277,7 +277,7 @@ class AnomalyDetector:
         db = SessionLocal()
         try:
             # Check if similar alert exists recently
-            recent_time = datetime.utcnow() - timedelta(minutes=5)
+            recent_time = datetime.now(timezone.utc) - timedelta(minutes=5)
             existing_alert = db.query(Alert).filter(
                 Alert.isp_id == isp_id,
                 Alert.alert_type == alert_type,
@@ -312,7 +312,7 @@ class AnomalyDetector:
                 'target_ip': target_ip,
                 'source_ip': source_ip,
                 'description': description,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
             self.redis_client.setex(
                 alert_key,

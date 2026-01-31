@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Tuple
 import redis
 import json
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import SessionLocal
 from models.models import TrafficLog
@@ -433,7 +433,7 @@ class TrafficCollector:
         """Publish flow to Redis stream for real-time processing"""
         try:
             flow_data = {
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'src_ip': flow.get('src_ip', ''),
                 'dst_ip': flow.get('dst_ip', ''),
                 'src_port': str(flow.get('src_port', 0)),
@@ -480,7 +480,7 @@ class TrafficCollector:
             db.commit()
             
             # Redis sliding window counters for traffic analysis
-            current_time = int(datetime.utcnow().timestamp())
+            current_time = int(datetime.now(timezone.utc).timestamp())
             window_key = f"traffic:window:{isp_id}:{src_ip}"
             
             # Add to sorted set with timestamp as score
