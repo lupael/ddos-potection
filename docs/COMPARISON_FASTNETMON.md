@@ -346,28 +346,260 @@ Consider the following when evaluating migration:
 
 ## Roadmap & Future Features
 
-Our platform is actively developed with the following on the roadmap:
+Our platform is actively developed with community input and continuous improvement. Below is our detailed roadmap for upcoming features and enhancements:
 
-- **Q2 2026**:
-  - Machine Learning attack detection
-  - Advanced geo-blocking with MaxMind GeoIP2
-  - ClickHouse integration for time-series data
-  - Helm charts for Kubernetes
-  - 2FA authentication
+### 🎯 Q2 2026 (April - June)
 
-- **Q3 2026**:
-  - DDoS scrubbing center integration
-  - AWS VPC & Google Cloud Flow Logs
-  - GRE decapsulation support
-  - LDAP/Active Directory integration
-  - Dark mode UI theme
+**Priority: High**
 
-- **Q4 2026**:
-  - Encrypted flow support
-  - Advanced ML-based anomaly detection
-  - Automated attack mitigation learning
-  - Enhanced reporting with custom templates
-  - Mobile apps (iOS/Android)
+- **Machine Learning Attack Detection** 🤖
+  - Implement ML-based anomaly detection algorithms
+  - Train models on historical attack patterns
+  - Real-time classification of attack types
+  - Automated threshold optimization based on traffic patterns
+  - Integration with TensorFlow/PyTorch for model inference
+
+- **Advanced Geo-blocking with MaxMind GeoIP2** 🌍
+  - Integrate MaxMind GeoIP2 database for accurate country/region identification
+  - Per-ISP geo-blocking rules (allow/block specific countries)
+  - City-level and ASN-level blocking capabilities
+  - Automatic GeoIP database updates
+  - Geo-based traffic analytics and visualization
+
+- **ClickHouse Integration** 📊
+  - High-performance time-series data storage
+  - Store traffic statistics for long-term analysis
+  - Fast aggregation queries for historical data
+  - Optimized storage for billions of flow records
+  - Migration tools from PostgreSQL to ClickHouse for analytics
+
+- **Helm Charts for Kubernetes** ☸️
+  - Production-ready Helm charts for easy deployment
+  - Automated scaling configurations
+  - ConfigMaps and Secrets management
+  - Multi-namespace support for multi-tenant deployments
+  - Integration with Kubernetes monitoring stack
+
+- **Two-Factor Authentication (2FA)** 🔐
+  - TOTP-based 2FA using authenticator apps (Google Authenticator, Authy)
+  - Backup codes for account recovery
+  - Per-user 2FA enforcement
+  - SMS-based 2FA option (via Twilio)
+  - Admin dashboard for 2FA management
+
+- **Slack Integration** 💬
+  - Real-time attack notifications to Slack channels
+  - Rich message formatting with attack details
+  - Interactive buttons for quick mitigation actions
+  - Configurable alert thresholds per channel
+  - Slack bot for querying platform status
+
+### 🚀 Q3 2026 (July - September)
+
+**Priority: Medium-High**
+
+- **DDoS Scrubbing Center Integration** 🛡️
+  - API integration with popular scrubbing services
+  - Automated traffic redirection during attacks
+  - Scrubbing status monitoring and alerts
+  - Cost tracking for scrubbing services
+  - Automatic fallback to local mitigation
+
+- **AWS VPC Flow Logs Support** ☁️
+  - Native ingestion of AWS VPC Flow Logs
+  - S3 bucket integration for log collection
+  - CloudWatch integration for real-time monitoring
+  - Multi-account and multi-region support
+  - Automatic parsing and normalization
+
+- **Google Cloud Flow Logs Support** ☁️
+  - Native ingestion of Google Cloud VPC Flow Logs
+  - Cloud Storage integration
+  - Pub/Sub integration for real-time streaming
+  - Multi-project support
+  - Integration with Google Cloud Logging
+
+- **GRE Decapsulation Support** 🔓
+  - Automatic GRE tunnel decapsulation in packet capture
+  - Support for multiple GRE layers
+  - IPv4 and IPv6 GRE support
+  - Integration with NetFlow/sFlow collectors
+  - Performance optimizations for high-speed GRE processing
+
+- **LDAP/Active Directory Integration** 👥
+  - User authentication via LDAP/AD
+  - Group-based role mapping (Admin, Operator, Viewer)
+  - Single Sign-On (SSO) support
+  - Automatic user provisioning and deprovisioning
+  - Secure LDAP over SSL/TLS (LDAPS)
+
+- **Dark Mode UI Theme** 🌙
+  - System-wide dark theme option
+  - Automatic theme switching based on system preferences
+  - High-contrast mode for accessibility
+  - Per-user theme preferences
+  - Optimized color schemes for monitoring dashboards
+
+- **InfluxDB Integration** 📈
+  - Time-series data export to InfluxDB
+  - Pre-built Grafana dashboards for InfluxDB data
+  - Real-time metrics streaming
+  - Data retention policies
+  - Integration with Telegraf for system metrics
+
+- **Graphite Support** 📉
+  - Metrics export to Graphite
+  - Carbon protocol support
+  - Custom metric namespaces per ISP
+  - Aggregation and rollup configurations
+
+### 🔮 Q4 2026 (October - December)
+
+**Priority: Medium**
+
+- **Encrypted Flow Support** 🔒
+  - Decryption of IPsec-encrypted flows
+  - TLS/SSL flow metadata analysis (without decryption)
+  - Support for encrypted NetFlow/IPFIX
+  - Integration with key management systems
+  - Secure key storage and rotation
+
+- **Advanced ML-based Anomaly Detection** 🧠
+  - Deep learning models for complex attack patterns
+  - Behavioral analysis and baseline learning
+  - Zero-day attack detection using unsupervised learning
+  - Automatic model retraining on new data
+  - Explainable AI for attack classification
+
+- **Automated Attack Mitigation Learning** 🎓
+  - Reinforcement learning for mitigation strategy optimization
+  - Historical attack response analysis
+  - Automated tuning of mitigation thresholds
+  - Learning from false positives/negatives
+  - A/B testing for mitigation strategies
+
+- **Enhanced Reporting with Custom Templates** 📄
+  - Drag-and-drop report builder
+  - Custom report templates per ISP
+  - White-label PDF reports with ISP branding
+  - Automated report scheduling and distribution
+  - Excel/CSV export with custom formatting
+  - Executive summary reports with visualizations
+
+- **Mobile Apps (iOS/Android)** 📱
+  - Native mobile applications for iOS and Android
+  - Real-time attack notifications and alerts
+  - Quick mitigation actions from mobile devices
+  - Traffic monitoring dashboards optimized for mobile
+  - Push notifications for critical events
+  - Biometric authentication (Face ID, Touch ID)
+  - Offline mode with data synchronization
+
+- **OVA Virtual Appliances** 💿
+  - Pre-configured OVA images for VMware/VirtualBox
+  - One-click deployment for production environments
+  - Automated initial setup wizard
+  - Support for multiple hypervisors
+  - Regular security and feature updates
+
+### 🌟 Future Considerations (2027+)
+
+**Long-term Vision**
+
+- **Payment Gateway Integration (Stripe/PayPal)** 💳
+  - Complete subscription management system
+  - Automated billing and invoicing
+  - Multiple payment methods support
+  - Subscription tiers with feature restrictions
+  - Revenue analytics and reporting
+
+- **Advanced Attack Visualization Maps** 🗺️
+  - 3D attack visualization with globe view
+  - Real-time attack origin mapping
+  - Network topology visualization
+  - Attack flow animations
+  - Integration with threat intelligence feeds
+
+- **Elasticsearch Integration** 🔍
+  - Full-text search for logs and events
+  - Advanced log aggregation and analysis
+  - Kibana dashboards for log visualization
+  - Distributed search for multi-datacenter deployments
+
+- **Webhook Support** 🔗
+  - Generic webhook integration for third-party services
+  - Custom payload templates
+  - Retry logic and failure handling
+  - Webhook signature verification
+  - Rate limiting and throttling
+
+- **API Versioning** 🔢
+  - Versioned REST API (v1, v2, etc.)
+  - Backward compatibility guarantees
+  - Deprecation notices and migration guides
+
+- **GraphQL API** 📡
+  - Modern GraphQL API alongside REST
+  - Real-time subscriptions for live updates
+  - Efficient data fetching with query optimization
+  - Schema introspection and documentation
+
+- **DDoS Attack Playbooks** 📚
+  - Pre-defined response playbooks for common attacks
+  - Step-by-step mitigation workflows
+  - Automated playbook execution
+  - Custom playbook creation and sharing
+
+- **Automated Response Workflows** ⚙️
+  - Visual workflow builder for custom automations
+  - Conditional logic and branching
+  - Integration with external systems via API
+  - Workflow versioning and rollback
+
+- **External Threat Intelligence Integration** 🕵️
+  - Integration with threat intelligence feeds (AlienVault, MISP, etc.)
+  - Automatic IP reputation scoring
+  - Proactive blocking of known bad actors
+  - Threat intelligence sharing with community
+
+- **Custom Dashboard Widgets** 🧩
+  - Widget marketplace for community-contributed components
+  - Drag-and-drop dashboard customization
+  - Custom data sources and visualizations
+  - Share dashboard layouts with team members
+
+---
+
+### 📝 Feature Request Process
+
+We welcome feature requests from the community! Here's how to propose new features:
+
+1. **Search Existing Issues**: Check if the feature has been requested before
+2. **Open a Discussion**: Create a GitHub Discussion to gauge community interest
+3. **Submit Feature Request**: Open a detailed GitHub Issue with use cases
+4. **Community Vote**: Features with high community support get prioritized
+5. **Implementation**: Accepted features are added to the roadmap
+
+### 🤝 Contributing to Roadmap Items
+
+Want to help implement these features? We welcome contributions!
+
+- Fork the repository and create a feature branch
+- Check the GitHub Issues for roadmap items marked as "help wanted"
+- Join our [Discussions](https://github.com/i4edubd/ddos-potection/discussions) to coordinate with the team
+- Read our [Contributing Guide](../CONTRIBUTING.md) for development guidelines
+
+---
+
+### 📊 Development Status
+
+Track our progress on [GitHub Projects](https://github.com/i4edubd/ddos-potection/projects) where we maintain:
+- Sprint planning boards
+- Feature development progress
+- Bug tracking and resolution
+- Community contributions
+
+Stay updated by watching our repository for release notifications!
 
 ---
 
