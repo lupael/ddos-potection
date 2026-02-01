@@ -62,7 +62,10 @@ def generate_pdf_report(isp_name, report_type, start_date, end_date, stats_data,
     pdf.cell(0, 8, f"Critical Alerts: {stats_data['critical_alerts']}", ln=True)
     pdf.cell(0, 8, f"High Severity Alerts: {stats_data['high_alerts']}", ln=True)
     pdf.cell(0, 8, f"Total Packets Processed: {stats_data['total_packets']:,}", ln=True)
-    pdf.cell(0, 8, f"Total Bytes: {stats_data['total_bytes']:,} ({stats_data['total_bytes'] / (1024**3):.2f} GB)", ln=True)
+    
+    # Safe division for bytes to GB conversion
+    total_gb = (stats_data['total_bytes'] / (1024**3)) if stats_data['total_bytes'] > 0 else 0
+    pdf.cell(0, 8, f"Total Bytes: {stats_data['total_bytes']:,} ({total_gb:.2f} GB)", ln=True)
     pdf.cell(0, 8, f"Mitigation Actions Taken: {stats_data['mitigation_count']}", ln=True)
     pdf.ln(10)
     

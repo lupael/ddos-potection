@@ -219,7 +219,10 @@ async def delete_isp_user(
     
     # Prevent self-deletion
     if user.id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete your own account. Please have another admin delete this account or transfer admin rights first."
+        )
     
     db.delete(user)
     db.commit()
