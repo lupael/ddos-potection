@@ -33,7 +33,13 @@ class Settings(BaseSettings):
     # Detection Thresholds
     SYN_FLOOD_THRESHOLD: int = 10000  # packets per second
     UDP_FLOOD_THRESHOLD: int = 50000  # packets per second
+    ICMP_FLOOD_THRESHOLD: int = 10000  # packets per minute
+    DNS_AMPLIFICATION_THRESHOLD: int = 500  # bytes per packet
     ENTROPY_THRESHOLD: float = 3.5
+    VOLUMETRIC_SRC_ENTROPY_THRESHOLD: float = 5.0
+    VOLUMETRIC_DST_ENTROPY_THRESHOLD: float = 2.0
+    SCANNING_SRC_ENTROPY_THRESHOLD: float = 4.0
+    SCANNING_DST_ENTROPY_THRESHOLD: float = 4.0
     
     # Mitigation
     AUTO_MITIGATION: bool = True

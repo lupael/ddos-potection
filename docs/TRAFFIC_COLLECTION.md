@@ -353,6 +353,81 @@ redis-cli XLEN alerts:stream
 4. **FlowSpec**: RFC 5575 traffic filtering
 5. **GeoIP**: Geographic attack source identification
 
+## UI Views and Menus
+
+The DDoS Protection Platform includes comprehensive UI views for Traffic Collection & Detection:
+
+### Traffic Collection View (`/traffic-collection`)
+- **Collection Status**: Real-time status of NetFlow/sFlow/IPFIX collectors
+  - Active protocols and listening ports
+  - Supported versions (NetFlow v5/v9, sFlow v5, IPFIX RFC 5101)
+- **Detection Thresholds**: Configure and view detection parameters
+  - SYN Flood threshold (packets per second)
+  - UDP Flood threshold (packets per minute)
+  - ICMP Flood threshold
+  - DNS Amplification threshold (bytes per packet)
+  - Entropy analysis threshold
+- **Router Detection**: Automatically detected routers sending flow data
+  - Router IP addresses
+  - Vendor detection (MikroTik, Cisco, Juniper)
+  - Flow counts and last seen timestamps
+- **Configuration Examples**: Ready-to-use router configuration snippets
+  - MikroTik NetFlow v9 setup
+  - Cisco NetFlow configuration
+  - Juniper sFlow configuration
+
+### Anomaly Detection View (`/anomaly-detection`)
+- **Detection Statistics**: 24-hour summary of detected attacks
+  - SYN Flood detections
+  - UDP Flood detections
+  - ICMP Flood detections
+  - DNS Amplification attacks
+  - Distributed DDoS events
+  - Volumetric attacks
+- **Detection Methods**: Detailed information about each detection type
+  - Method description and severity
+  - Detection algorithm explanation
+  - Visual indicators for active threats
+- **Real-time Monitoring Features**:
+  - Sliding window analysis visualization
+  - Redis streams status
+  - Pub/Sub alert channels
+  - Alert deduplication status
+
+### Entropy Analysis View (`/entropy-analysis`)
+- **Current Traffic Pattern**: Real-time attack pattern recognition
+  - Normal Traffic
+  - Distributed DDoS (Low source + Low destination entropy)
+  - Volumetric Attack (High source + Low destination entropy)
+  - Scanning Activity (High entropy across dimensions)
+- **Multi-dimensional Entropy Meters**:
+  - Source IP Entropy with visual meter
+  - Destination IP Entropy with threshold indicator
+  - Protocol Entropy distribution
+- **Shannon Entropy Explanation**:
+  - Entropy level interpretation (Low/Medium/High)
+  - Attack pattern correlation table
+  - Threshold configuration guide
+
+### Navigation
+Access these views through the main navigation menu:
+- **Collection & Detection** dropdown menu contains:
+  - Traffic Collection
+  - Anomaly Detection
+  - Entropy Analysis
+
+## API Endpoints
+
+New REST API endpoints for Traffic Collection & Detection:
+
+```
+GET /api/v1/traffic-collection/status
+GET /api/v1/traffic-collection/config
+GET /api/v1/traffic-collection/routers
+GET /api/v1/traffic-collection/entropy
+GET /api/v1/traffic-collection/detection/stats
+```
+
 ## References
 
 - [RFC 3954](https://www.rfc-editor.org/rfc/rfc3954) - NetFlow v9

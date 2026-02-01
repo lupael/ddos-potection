@@ -10,6 +10,9 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PacketCapture from './pages/PacketCapture';
 import Hostgroups from './pages/Hostgroups';
+import TrafficCollection from './pages/TrafficCollection';
+import AnomalyDetection from './pages/AnomalyDetection';
+import EntropyAnalysis from './pages/EntropyAnalysis';
 
 function App() {
   const isAuthenticated = () => {
@@ -86,6 +89,30 @@ function App() {
             element={
               <PrivateRoute>
                 <Hostgroups />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/traffic-collection"
+            element={
+              <PrivateRoute>
+                <TrafficCollection />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/anomaly-detection"
+            element={
+              <PrivateRoute>
+                <AnomalyDetection />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/entropy-analysis"
+            element={
+              <PrivateRoute>
+                <EntropyAnalysis />
               </PrivateRoute>
             }
           />

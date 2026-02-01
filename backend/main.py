@@ -14,6 +14,7 @@ from routers import (
     attack_map_router,
     hostgroup_router,
     capture_router,
+    traffic_collection_router
     subscription_router,
     payment_router
 )
@@ -61,6 +62,7 @@ app.include_router(payment_router.router, prefix="/api/v1/payments", tags=["Paym
 app.include_router(attack_map_router.router, prefix="/api/v1/attack-map", tags=["Attack Map"])
 app.include_router(hostgroup_router.router)  # Already has prefix in router definition
 app.include_router(capture_router.router)  # Already has prefix in router definition
+app.include_router(traffic_collection_router.router, prefix="/api/v1/traffic-collection", tags=["Traffic Collection"])
 
 @app.get("/")
 async def root():
