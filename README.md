@@ -38,18 +38,40 @@ Real-time traffic monitoring • Anomaly detection • Automated mitigation • 
 
 ## 🚀 Features
 
+### 🎯 Performance & Detection
+- **Detects DoS/DDoS in 1-2 seconds**: Ultra-fast attack detection using real-time analysis
+- **Scales to terabits on single server**: NetFlow/sFlow/IPFIX with sampling handles massive traffic
+- **40G+ in mirror mode**: Direct packet capture with AF_PACKET and AF_XDP
+
+### 📡 Supported Packet Capture Engines
+- **NetFlow v5, v9, v9 Lite**: Industry-standard flow export from Cisco and compatible routers
+- **IPFIX**: IETF standard for IP Flow Information Export (NetFlow v10)
+- **sFlow v5**: Real-time traffic sampling for switches and routers
+- **PCAP**: Full packet capture for forensic analysis
+- **AF_PACKET (Recommended)**: High-performance Linux native capture (10-40 Gbps)
+- **AF_XDP**: Ultra-high-speed XDP-based capture (40-100+ Gbps)
+- **Netmap**: FreeBSD support (deprecated for Linux)
+- **PF_RING / PF_RING ZC**: Legacy support (deprecated, CentOS 6 only in v1.2.0)
+
+[See comparison table for all packet capture engines →](docs/PACKET_CAPTURE.md)
+
 ### Traffic Collection & Detection
-- **NetFlow/sFlow/IPFIX Support**: Collect traffic data from MikroTik, Cisco, and Juniper routers
+- **Multi-vendor Router Support**: Collect traffic data from MikroTik, Cisco, Juniper, and other routers
 - **Real-time Anomaly Detection**: Detect SYN floods, UDP floods, and other attack patterns
 - **Entropy Analysis**: Identify distributed attacks using statistical analysis
+- **Complete IPv6 Support**: Full support for IPv6 traffic collection, detection, and mitigation
+- **Per-Subnet Thresholds**: Configure different thresholds per subnet with hostgroups feature
+- **VLAN Untagging**: Automatic VLAN tag removal in mirror and sFlow modes
 - **Redis Integration**: Fast real-time counters and event streaming
 
 ### Mitigation & Automation
 - **Automated Firewall Rules**: Support for iptables/nftables
 - **MikroTik API Integration**: Direct router control for rule deployment
-- **BGP Blackholing (RTBH)**: Announce blackhole routes for attack traffic (supports ExaBGP, FRR, BIRD)
-- **FlowSpec Support**: Send FlowSpec announcements to BGP routers
-- **Custom Rule Engine**: Define rate limits, IP blocks, protocol filters, and geo-blocking
+- **BGP Blackholing (RTBH)**: Announce blackhole routes for attack traffic (supports ExaBGP, GoBGP, FRR, BIRD)
+- **FlowSpec Support**: Send FlowSpec announcements to BGP routers (RFC 5575)
+- **Custom Rule Engine**: Define rate limits, IP blocks, protocol filters, geo-blocking, and port filters
+- **Trigger Scripts**: Execute custom block/notify scripts on attack detection
+- **Attack Fingerprints**: Capture attack traffic in PCAP format for forensic analysis
 
 ### Beautiful Dashboard
 - **React-based UI**: Modern, responsive web interface
@@ -65,12 +87,24 @@ Real-time traffic monitoring • Anomaly detection • Automated mitigation • 
 - **Payment Integration**: Stripe, PayPal, and other payment gateways
 - **Monthly Reports**: Generate PDF/CSV reports for customers
 
+### Data Export & Integration
+- **Kafka Export**: Stream flows and packets in JSON and Protobuf format
+- **ClickHouse Integration**: High-performance analytics database
+- **InfluxDB Integration**: Time-series metrics and monitoring
+- **Graphite Integration**: Metrics aggregation and visualization
+- **MongoDB Protocol Support**: Compatible with native MongoDB and FerretDB
+
 ### Monitoring & Alerts
-- **Prometheus Integration**: Comprehensive metrics collection
+- **Prometheus Support**: System metrics and total traffic counters
 - **Grafana Dashboards**: Advanced visualization
-- **Multi-channel Alerts**: Email, SMS, and Telegram notifications
+- **Multi-channel Alerts**: Email, SMS, Telegram, Slack, and PagerDuty notifications
 - **Live Attack Maps**: Visualize attacks in real-time
 - **Mitigation Status**: Track active and historical mitigations
+
+### API & Automation
+- **RESTful API**: Complete API for programmatic access and automation
+- **Redis Integration**: Real-time data processing and pub/sub messaging
+- **Webhook Support**: Integrate with external systems
 
 ## 📸 Screenshots
 
@@ -343,9 +377,10 @@ curl -X POST http://localhost:8000/api/v1/alerts/1/resolve \
 
 ### Network Protocols
 - **NetFlow v9/v10** - Cisco traffic export
-- **sFlow** - Real-time traffic sampling
-- **IPFIX** - IP Flow Information Export
-- **BGP/ExaBGP** - Route advertisements for mitigation
+- **sFlow v5** - Real-time traffic sampling
+- **IPFIX** - IP Flow Information Export (NetFlow v10)
+- **BGP** - Route advertisements for mitigation (ExaBGP, GoBGP, FRR, BIRD)
+- **PCAP/AF_PACKET/AF_XDP** - Direct packet capture engines
 
 ## 🔒 Security
 
@@ -381,9 +416,14 @@ npm test
 ## 📖 Documentation
 
 - [Quick Start Guide](QUICKSTART.md)
+- [Complete Feature Guide](docs/FEATURES.md) - **Comprehensive overview of all features**
+- [Packet Capture Engine Guide](docs/PACKET_CAPTURE.md) - **Compare all 8 packet capture engines**
+- [Traffic Collection Guide](docs/TRAFFIC_COLLECTION.md) - NetFlow, sFlow, and IPFIX setup
+- [BGP Blackholing (RTBH) Guide](docs/BGP-RTBH.md) - Setup ExaBGP, GoBGP, FRR, and BIRD
+- [FlowSpec Guide](docs/FLOWSPEC.md) - RFC 5575 traffic filtering
+- [Custom Rules Engine](docs/CUSTOM-RULES.md) - Rate limits, geo-blocking, and more
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Development Guide](docs/DEVELOPMENT.md)
-- [BGP Blackholing (RTBH) Guide](docs/BGP-RTBH.md) - Setup and use BGP-based DDoS mitigation
 - [Security Documentation](SECURITY.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
 
