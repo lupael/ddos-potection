@@ -13,7 +13,9 @@ from routers import (
     auth_router,
     attack_map_router,
     hostgroup_router,
-    capture_router
+    capture_router,
+    subscription_router,
+    payment_router
 )
 from database import engine, Base
 from config import settings
@@ -54,6 +56,8 @@ app.include_router(mitigation_router.router, prefix="/api/v1/mitigation", tags=[
 app.include_router(isp_router.router, prefix="/api/v1/isp", tags=["ISP Management"])
 app.include_router(alerts_router.router, prefix="/api/v1/alerts", tags=["Alerts"])
 app.include_router(reports_router.router, prefix="/api/v1/reports", tags=["Reports"])
+app.include_router(subscription_router.router, prefix="/api/v1/subscriptions", tags=["Subscriptions"])
+app.include_router(payment_router.router, prefix="/api/v1/payments", tags=["Payments"])
 app.include_router(attack_map_router.router, prefix="/api/v1/attack-map", tags=["Attack Map"])
 app.include_router(hostgroup_router.router)  # Already has prefix in router definition
 app.include_router(capture_router.router)  # Already has prefix in router definition

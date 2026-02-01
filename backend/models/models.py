@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON, Float, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -12,12 +12,16 @@ class ISP(Base):
     subscription_status = Column(String(50), default="trial")  # trial, active, suspended, cancelled
     subscription_plan = Column(String(50), default="basic")  # basic, professional, enterprise
     api_key = Column(String(255), unique=True, index=True)
+    stripe_customer_id = Column(String(255), nullable=True)
+    paypal_customer_id = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     users = relationship("User", back_populates="isp")
     rules = relationship("Rule", back_populates="isp")
     alerts = relationship("Alert", back_populates="isp")
+    subscriptions = relationship("Subscription", back_populates="isp")
+    payments = relationship("Payment", back_populates="isp")
 
 class User(Base):
     __tablename__ = "users"
@@ -99,4 +103,55 @@ class Report(Base):
     period_start = Column(DateTime(timezone=True))
     period_end = Column(DateTime(timezone=True))
     file_path = Column(String(500))
+    file_format = Column(String(10), default="txt")  # pdf, csv, txt
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"))
+    plan_name = Column(String(50))  # basic, professional, enterprise
+    plan_price = Column(Numeric(10, 2))  # Monthly price
+    billing_cycle = Column(String(20), default="monthly")  # monthly, yearly
+    status = Column(String(50), default="active")  # active, cancelled, expired, suspended
+    start_date = Column(DateTime(timezone=True), server_default=func.now())
+    end_date = Column(DateTime(timezone=True))
+    auto_renew = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    isp = relationship("ISP", back_populates="subscriptions")
+
+class Payment(Base):
+    __tablename__ = "payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"))
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=True)
+    amount = Column(Numeric(10, 2))
+    currency = Column(String(10), default="USD")
+    payment_method = Column(String(50))  # stripe, paypal, bkash
+    payment_gateway_id = Column(String(255))  # Transaction ID from payment gateway
+    status = Column(String(50), default="pending")  # pending, completed, failed, refunded
+    description = Column(Text, nullable=True)
+    metadata = Column(JSON, nullable=True)  # Store additional payment data
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    isp = relationship("ISP", back_populates="payments")
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"))
+    payment_id = Column(Integer, ForeignKey("payments.id"), nullable=True)
+    invoice_number = Column(String(100), unique=True, index=True)
+    amount = Column(Numeric(10, 2))
+    currency = Column(String(10), default="USD")
+    status = Column(String(50), default="unpaid")  # unpaid, paid, overdue, cancelled
+    due_date = Column(DateTime(timezone=True))
+    paid_date = Column(DateTime(timezone=True), nullable=True)
+    file_path = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
