@@ -8,7 +8,8 @@ import Rules from './pages/Rules';
 import Alerts from './pages/Alerts';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
-import BgpBlackholing from './pages/BgpBlackholing';
+import PacketCapture from './pages/PacketCapture';
+import Hostgroups from './pages/Hostgroups';
 
 function App() {
   const isAuthenticated = () => {
@@ -73,10 +74,18 @@ function App() {
             }
           />
           <Route
-            path="/bgp-blackholing"
+            path="/capture"
             element={
               <PrivateRoute>
-                <BgpBlackholing />
+                <PacketCapture />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/hostgroups"
+            element={
+              <PrivateRoute>
+                <Hostgroups />
               </PrivateRoute>
             }
           />

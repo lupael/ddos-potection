@@ -79,6 +79,25 @@ class Settings(BaseSettings):
     # GeoIP Configuration (for geo-blocking)
     GEOIP_DATABASE_PATH: str = "/usr/share/GeoIP/GeoLite2-Country.mmdb"
     
+    # Packet Capture Configuration
+    PCAP_ENABLED: bool = True  # Enable PCAP capture features
+    PCAP_DIR: str = "/var/lib/ddos-protection/pcaps"  # Directory for PCAP files
+    PCAP_MAX_PACKETS: int = 10000  # Maximum packets per PCAP file
+    VLAN_UNTAGGING_ENABLED: bool = True  # Remove VLAN tags from captured packets
+    AF_PACKET_ENABLED: bool = True  # Enable AF_PACKET capture (Linux only)
+    AF_XDP_ENABLED: bool = False  # Enable AF_XDP capture (requires libxdp)
+    
+    # Threshold Configuration
+    DEFAULT_PPS_THRESHOLD: int = 10000  # Default packets per second threshold
+    DEFAULT_BPS_THRESHOLD: int = 100000000  # Default bytes per second (100 Mbps)
+    DEFAULT_FPS_THRESHOLD: int = 1000  # Default flows per second threshold
+    THRESHOLD_CHECK_INTERVAL: int = 1  # Seconds between threshold checks
+    
+    # Script Execution
+    SCRIPTS_ENABLED: bool = True  # Enable script execution for block/notify
+    SCRIPTS_DIR: str = "/etc/ddos-protection/scripts"  # Directory for scripts
+    SCRIPT_TIMEOUT: int = 30  # Maximum script execution time in seconds
+    
     class Config:
         env_file = ".env"
 

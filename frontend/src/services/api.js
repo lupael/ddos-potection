@@ -112,4 +112,24 @@ export const reportsService = {
   download: (id) => api.get(`/reports/${id}/download`, { responseType: 'blob' }),
 };
 
+// Packet Capture endpoints
+export const captureService = {
+  start: (captureData) => api.post('/capture/start', captureData),
+  stop: (captureId) => api.post(`/capture/stop/${captureId}`),
+  status: (captureId) => api.get(`/capture/status/${captureId}`),
+  list: () => api.get('/capture/list'),
+  download: (filename) => api.get(`/capture/download/${filename}`, { responseType: 'blob' }),
+  cleanup: (maxAgeDays = 7) => api.delete(`/capture/cleanup?max_age_days=${maxAgeDays}`),
+};
+
+// Hostgroup endpoints
+export const hostgroupService = {
+  list: () => api.get('/hostgroups/'),
+  create: (hostgroup) => api.post('/hostgroups/', hostgroup),
+  get: (name) => api.get(`/hostgroups/${name}`),
+  delete: (name) => api.delete(`/hostgroups/${name}`),
+  checkIp: (ip) => api.post('/hostgroups/check-ip', { ip }),
+  getDefaults: () => api.get('/hostgroups/defaults/thresholds'),
+};
+
 export default api;
