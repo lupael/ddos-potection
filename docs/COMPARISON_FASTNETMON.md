@@ -31,10 +31,10 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **AF_PACKET Capture** | ✓ | ✓ |
 | **AF_XDP High-performance** | ✓ | ✓ |
 | **VLAN Untagging (802.1Q/802.1ad)** | ✓ | ✓ |
-| **GRE Decapsulation** | Planned | ✓ |
-| **AWS VPC Flow Logs** | Planned | ✓ |
-| **Google Cloud Flow Logs** | Planned | ✓ |
-| **Encrypted Flow Support** | Planned | ✓ |
+| **GRE Decapsulation** | Planned (Q3 2026) | ✓ |
+| **AWS VPC Flow Logs** | Planned (Q3 2026) | ✓ |
+| **Google Cloud Flow Logs** | Planned (Q3 2026) | ✓ |
+| **Encrypted Flow Support** | Planned (Q4 2026) | ✓ |
 
 ### 2. Attack Detection & Analysis
 
@@ -49,7 +49,7 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Prefix-level Detection** | ✓ (Subnet-based) | ✓ |
 | **Custom Attack Patterns** | ✓ | ✓ |
 | **Real-time Anomaly Detection** | ✓ | ✓ |
-| **Machine Learning Detection** | Planned | Limited |
+| **Machine Learning Detection** | Planned (Q2 2026) | Limited |
 
 ### 3. Threshold Management
 
@@ -78,7 +78,7 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Rate Limiting Rules** | ✓ | ✓ |
 | **Protocol Filtering** | ✓ | ✓ |
 | **Automated Mitigation** | ✓ | ✓ |
-| **DDoS Scrubbing Center Integration** | Planned | ✓ |
+| **DDoS Scrubbing Center Integration** | Planned (Q3 2026) | ✓ |
 
 ### 5. User Interface & Management
 
@@ -93,9 +93,38 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Settings Panel** | ✓ | ✓ |
 | **Command Line Interface** | ✓ (API + bash) | ✓ (fcli) |
 | **Mobile Responsive** | ✓ | Limited |
-| **Dark/Light Mode** | Planned | ✓ |
+| **Dark/Light Mode** | Planned (Q3 2026) | ✓ |
 
-### 6. Multi-tenancy & ISP Features
+### 6. UI Views & Menus
+
+| Feature | Our Platform ✓ | FastNetMon Advanced |
+|---------|---------------|---------------------|
+| **Dashboard Overview** | ✓ (Real-time metrics) | ✓ |
+| **Traffic Analytics View** | ✓ (Interactive charts) | ✓ |
+| **Attack History** | ✓ (Detailed logs) | ✓ |
+| **Host/IP Management** | ✓ (Search & filter) | ✓ |
+| **Network/Subnet Manager** | ✓ (Visual hierarchy) | ✓ |
+| **Threshold Configuration** | ✓ (Per-network/host) | ✓ |
+| **Hostgroup/Network Groups** | ✓ (Bulk operations) | ✓ |
+| **BGP Configuration** | ✓ (ExaBGP/FRR setup) | ✓ |
+| **FlowSpec Rules Manager** | ✓ (Visual editor) | ✓ |
+| **Firewall Rules View** | ✓ (Active rules) | ✓ |
+| **Whitelist/Blacklist Manager** | ✓ (IP/CIDR management) | ✓ |
+| **Alert Configuration** | ✓ (Multi-channel) | ✓ |
+| **Notification Settings** | ✓ (Email/SMS/Telegram) | ✓ |
+| **User Management** | ✓ (RBAC controls) | Limited |
+| **ISP/Tenant Management** | ✓ (Multi-tenant) | ❌ |
+| **Subscription Plans** | ✓ (Tiered pricing) | ❌ |
+| **Payment History** | ✓ (Transaction logs) | ❌ |
+| **Customer Reports** | ✓ (Generate & download) | ✓ |
+| **System Settings** | ✓ (Global config) | ✓ |
+| **Integration Settings** | ✓ (API keys, webhooks) | ✓ |
+| **Monitoring Dashboard** | ✓ (System health) | ✓ |
+| **Logs Viewer** | ✓ (Real-time streaming) | ✓ |
+| **API Explorer** | ✓ (Swagger UI) | ✓ |
+| **Help & Documentation** | ✓ (Context-sensitive) | ✓ |
+
+### 7. Multi-tenancy & ISP Features
 
 | Feature | Our Platform ✓ | FastNetMon Advanced |
 |---------|---------------|---------------------|
@@ -107,7 +136,7 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Monthly Customer Reports** | ✓ (PDF/CSV) | ✓ |
 | **Per-customer Billing** | ✓ | ❌ |
 
-### 7. Monitoring & Alerting
+### 8. Monitoring & Alerting
 
 | Feature | Our Platform ✓ | FastNetMon Advanced |
 |---------|---------------|---------------------|
@@ -116,13 +145,13 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Email Notifications** | ✓ (SMTP, HTML formatted) | ✓ |
 | **SMS Alerts** | ✓ (Twilio) | Limited |
 | **Telegram Notifications** | ✓ (Rich format) | ✓ |
-| **Slack Integration** | Planned | ✓ |
+| **Slack Integration** | Planned (Q2 2026) | ✓ |
 | **Webhook Support** | ✓ | ✓ |
 | **Syslog Integration** | ✓ | ✓ |
 | **Custom Alert Rules** | ✓ | ✓ |
 | **Alert Aggregation** | ✓ | ✓ |
 
-### 8. API & Integration
+### 9. API & Integration
 
 | Feature | Our Platform ✓ | FastNetMon Advanced |
 |---------|---------------|---------------------|
@@ -134,7 +163,7 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Rate Limiting** | ✓ | ✓ |
 | **CORS Support** | ✓ | ✓ |
 
-### 9. Scalability & Performance
+### 10. Scalability & Performance
 
 | Feature | Our Platform ✓ | FastNetMon Advanced |
 |---------|---------------|---------------------|
@@ -148,28 +177,28 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Redis Clustering** | ✓ | Limited |
 | **Database Replication** | ✓ (PostgreSQL) | ✓ |
 
-### 10. Deployment & DevOps
+### 11. Deployment & DevOps
 
 | Feature | Our Platform ✓ | FastNetMon Advanced |
 |---------|---------------|---------------------|
 | **Docker Support** | ✓ (Official images) | ✓ |
 | **Docker Compose** | ✓ (One-command deploy) | Limited |
 | **Kubernetes** | ✓ (Full support) | Limited |
-| **Helm Charts** | Planned | Limited |
-| **OVA Appliances** | Planned | ✓ |
+| **Helm Charts** | Planned (Q2 2026) | Limited |
+| **OVA Appliances** | Planned (Q4 2026) | ✓ |
 | **ARM64 Support** | ✓ | ✓ |
 | **AWS/GCP/Azure** | ✓ (Cloud-ready) | ✓ |
 | **Automated Installers** | ✓ (Docker-based) | ✓ |
 | **CI/CD Pipeline** | ✓ (GitHub Actions) | ❌ |
 
-### 11. Data Storage & Reporting
+### 12. Data Storage & Reporting
 
 | Feature | Our Platform ✓ | FastNetMon Advanced |
 |---------|---------------|---------------------|
 | **PostgreSQL Support** | ✓ (Primary DB) | Limited |
-| **ClickHouse Support** | Planned | ✓ |
-| **InfluxDB Support** | Planned | ✓ |
-| **Graphite Support** | Planned | ✓ |
+| **ClickHouse Support** | Planned (Q2 2026) | ✓ |
+| **InfluxDB Support** | Planned (Q3 2026) | ✓ |
+| **Graphite Support** | Planned (Q3 2026) | ✓ |
 | **Persistent Traffic Storage** | ✓ | ✓ |
 | **Historical Data Analysis** | ✓ | ✓ |
 | **Traffic Reports** | ✓ | ✓ |
@@ -177,7 +206,7 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **Top Talker Reports** | ✓ | ✓ (Automated) |
 | **PDF Report Generation** | ✓ | ✓ |
 
-### 12. Security Features
+### 13. Security Features
 
 | Feature | Our Platform ✓ | FastNetMon Advanced |
 |---------|---------------|---------------------|
@@ -187,8 +216,8 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | **API Rate Limiting** | ✓ | ✓ |
 | **IP Whitelisting** | ✓ | ✓ |
 | **Audit Logging** | ✓ | ✓ |
-| **2FA Support** | Planned | ✓ |
-| **LDAP/AD Integration** | Planned | ✓ |
+| **2FA Support** | Planned (Q2 2026) | ✓ |
+| **LDAP/AD Integration** | Planned (Q3 2026) | ✓ |
 
 ---
 
@@ -220,11 +249,12 @@ This document provides a comprehensive comparison between our open-source **DDoS
 | Aspect | Our Platform | FastNetMon Advanced |
 |--------|--------------|---------------------|
 | **Community Support** | GitHub Issues/Discussions | Limited |
-| **Commercial Support** | Available (optional) | Included in license |
+| **Commercial Support** | Available via [ispbills.com](https://www.ispbills.com/) | Included in license |
 | **Bug Fixes** | Community-driven | Vendor-driven |
 | **Feature Requests** | Open (PRs welcome) | Limited to roadmap |
 | **Documentation** | Public & Open | Public but limited |
 | **Training** | Self-service | Commercial options |
+| **Contact** | support@ispbills.com | Vendor contact |
 
 ---
 
@@ -375,6 +405,8 @@ Visit http://localhost:3000 to access your dashboard!
 
 For detailed setup instructions, see our [Quick Start Guide](../QUICKSTART.md).
 
+For commercial support and enterprise features, visit [https://www.ispbills.com/](https://www.ispbills.com/) or contact us at support@ispbills.com.
+
 ---
 
 ## Additional Resources
@@ -393,7 +425,8 @@ For detailed setup instructions, see our [Quick Start Guide](../QUICKSTART.md).
 
 - 🐛 [Report Issues](https://github.com/i4edubd/ddos-potection/issues)
 - 💬 [Join Discussions](https://github.com/i4edubd/ddos-potection/discussions)
-- 📧 Email: support@example.com
+- 🌐 Website: [https://www.ispbills.com/](https://www.ispbills.com/)
+- 📧 Email: support@ispbills.com
 
 ---
 
