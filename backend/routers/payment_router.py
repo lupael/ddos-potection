@@ -191,13 +191,15 @@ async def create_paypal_order(
     # Note: This is a simplified version. In production, you would integrate with PayPal SDK
     # and create an actual order using PayPal API
     
+    import uuid
+    
     payment = Payment(
         isp_id=current_user.isp_id,
         subscription_id=payment_data.subscription_id,
         amount=payment_data.amount,
         currency="USD",
         payment_method="paypal",
-        payment_gateway_id=f"PAYPAL-{datetime.utcnow().timestamp()}",  # Placeholder
+        payment_gateway_id=f"PAYPAL-PLACEHOLDER-{uuid.uuid4()}",
         status="pending",
         metadata={"note": "PayPal integration - implement with PayPal SDK"}
     )
@@ -224,13 +226,15 @@ async def create_bkash_payment(
     # Note: This is a simplified version. In production, you would integrate with bKash API
     # bKash requires authentication and specific API calls
     
+    import uuid
+    
     payment = Payment(
         isp_id=current_user.isp_id,
         subscription_id=payment_data.subscription_id,
         amount=payment_data.amount,
         currency="BDT",  # bKash uses Bangladeshi Taka
         payment_method="bkash",
-        payment_gateway_id=f"BKASH-{datetime.utcnow().timestamp()}",  # Placeholder
+        payment_gateway_id=f"BKASH-PLACEHOLDER-{uuid.uuid4()}",
         status="pending",
         metadata={
             "phone_number": payment_data.phone_number,
