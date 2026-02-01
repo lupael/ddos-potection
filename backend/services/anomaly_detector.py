@@ -347,7 +347,13 @@ class AnomalyDetector:
             print(f"Alert created: {alert_type} [{severity}] - {description}")
             
             # Send notifications asynchronously
-            asyncio.create_task(self._send_alert_notifications(alert_data))
+            # Note: Using asyncio.create_task() for fire-and-forget notification
+            # In production, consider using a task queue (Celery) for better reliability
+            try:
+                asyncio.create_task(self._send_alert_notifications(alert_data))
+            except RuntimeError:
+                # If event loop is not running, notifications will be skipped
+                print("Warning: Cannot send notifications - no event loop running")
             
         except Exception as e:
             print(f"Error creating alert: {e}")

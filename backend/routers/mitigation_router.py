@@ -205,7 +205,7 @@ async def stop_mitigation(
     
     if success:
         mitigation.status = "completed"
-        mitigation.completed_at = datetime.utcnow()
+        mitigation.completed_at = datetime.now(timezone.utc)
         db.commit()
         return {"message": "Mitigation stopped successfully", "status": "completed"}
     else:

@@ -240,12 +240,17 @@ class MetricsCollector:
                 TrafficLog.timestamp >= one_min_ago
             ).group_by(TrafficLog.protocol).all()
             
-            # These are cumulative counters, so we increment by the new values
-            # In production, this would need to track what was already counted
-            for stat in traffic_stats:
-                # Note: In a real implementation, we'd need to track what we've already counted
-                # For now, this provides the metrics structure
-                pass
+            # Note: These counters should only increment with new data
+            # In a production implementation, we would need to track which records
+            # have already been counted to avoid double-counting.
+            # For now, we skip incrementing to avoid incorrect cumulative values.
+            # A better approach would be to use a separate tracking table or
+            # implement this as a background job that processes new records.
+            
+            # Future implementation:
+            # - Add a 'processed_for_metrics' flag to TrafficLog
+            # - Only count unprocessed records
+            # - Mark records as processed after counting
             
         except Exception as e:
             print(f"Error updating traffic metrics: {e}")

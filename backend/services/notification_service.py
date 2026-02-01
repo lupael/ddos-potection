@@ -221,8 +221,12 @@ Please review and take appropriate action if necessary.
     
     def format_alert_sms(self, alert: Dict) -> str:
         """Format alert data for SMS notification (must be concise)"""
-        message = f"DDoS Alert [{alert['severity'].upper()}]: {alert['alert_type']} targeting {alert['target_ip']}. {alert['description'][:80]}"
-        return message[:160]  # SMS limit
+        SMS_DESCRIPTION_MAX_LENGTH = 80  # SMS has limited character space
+        SMS_MESSAGE_MAX_LENGTH = 160  # Standard SMS length limit
+        
+        description = alert['description'][:SMS_DESCRIPTION_MAX_LENGTH]
+        message = f"DDoS Alert [{alert['severity'].upper()}]: {alert['alert_type']} targeting {alert['target_ip']}. {description}"
+        return message[:SMS_MESSAGE_MAX_LENGTH]  # SMS limit
     
     async def send_alert_notification(self, alert: Dict, channels: List[str], recipients: Dict[str, str]) -> Dict[str, bool]:
         """
