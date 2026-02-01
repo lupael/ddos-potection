@@ -358,12 +358,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "increase(ddos_mitigations_total[5m])",
+          "expr": "sum by (action_type) (increase(ddos_mitigations_total[5m]))",
           "legendFormat": "{{action_type}}",
           "refId": "A"
         }
       ],
-      "title": "Mitigation Actions Applied (5m rate)",
+      "title": "Mitigation Actions (5m increase)",
       "type": "timeseries"
     },
     {

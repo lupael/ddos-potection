@@ -245,7 +245,7 @@ async def get_active_mitigations(
     
     result = []
     for mitigation, target_ip, source_ip, alert_type, severity in active_mitigations:
-        duration_seconds = (datetime.utcnow() - mitigation.created_at).total_seconds()
+        duration_seconds = (datetime.now(timezone.utc) - mitigation.created_at).total_seconds()
         result.append({
             'id': mitigation.id,
             'alert_id': mitigation.alert_id,

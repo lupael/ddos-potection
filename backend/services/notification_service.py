@@ -8,7 +8,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Optional, Dict
 from datetime import datetime
-import json
 
 import httpx
 from config import settings
@@ -27,7 +26,7 @@ class NotificationService:
             self.sms_enabled = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN)
     
     async def send_email(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> bool:
-        """Send email notification"""
+        """Send email notification (runs in thread pool to avoid blocking)"""
         if not self.smtp_enabled:
             print("Email notifications not configured")
             return False
@@ -47,11 +46,14 @@ class NotificationService:
                 html_part = MIMEText(html_body, 'html')
                 msg.attach(html_part)
             
-            # Send email
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                server.starttls()
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                server.send_message(msg)
+            # Send email in a background thread to avoid blocking the event loop
+            def _send_email_sync() -> None:
+                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                    server.send_message(msg)
+            
+            await asyncio.to_thread(_send_email_sync)
             
             print(f"Email sent to {to_email}: {subject}")
             return True
@@ -86,7 +88,7 @@ class NotificationService:
             return False
     
     async def send_sms(self, to_number: str, message: str) -> bool:
-        """Send SMS notification via Twilio"""
+        """Send SMS notification via Twilio (runs in thread pool to avoid blocking)"""
         if not self.sms_enabled:
             print("SMS notifications not configured")
             return False
@@ -95,15 +97,19 @@ class NotificationService:
             # Import Twilio client only if needed
             from twilio.rest import Client
             
-            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            # Send SMS in a background thread to avoid blocking the event loop
+            def _send_sms_sync() -> str:
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                msg = client.messages.create(
+                    body=message,
+                    from_=settings.TWILIO_PHONE_NUMBER,
+                    to=to_number
+                )
+                return msg.sid
             
-            message = client.messages.create(
-                body=message,
-                from_=settings.TWILIO_PHONE_NUMBER,
-                to=to_number
-            )
+            message_sid = await asyncio.to_thread(_send_sms_sync)
             
-            print(f"SMS sent to {to_number}: {message.sid}")
+            print(f"SMS sent to {to_number}: {message_sid}")
             return True
             
         except ImportError:

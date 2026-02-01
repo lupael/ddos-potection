@@ -1,19 +1,20 @@
 """
 Attack Map API endpoints for real-time visualization
 """
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
-from typing import List, Dict
+from typing import Dict, Optional
 from datetime import datetime, timedelta, timezone
 import json
 import asyncio
 
 from database import get_db
-from models.models import Alert, TrafficLog, User
+from models.models import Alert, User
 from routers.auth_router import get_current_user
 import redis
 from config import settings
+from jose import jwt, JWTError
 
 router = APIRouter()
 
@@ -161,16 +162,49 @@ async def get_attack_statistics(
 
 
 @router.websocket("/ws/live-attacks")
-async def websocket_live_attacks(websocket: WebSocket):
+async def websocket_live_attacks(
+    websocket: WebSocket,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     """
     WebSocket endpoint for real-time attack updates
     Streams new attacks as they are detected
+    Requires authentication via token query parameter
     """
+    # Authenticate the WebSocket connection
+    if not token:
+        await websocket.close(code=1008, reason="Missing authentication token")
+        return
+    
+    try:
+        # Verify JWT token
+        from routers.auth_router import SECRET_KEY, ALGORITHM
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            await websocket.close(code=1008, reason="Invalid token")
+            return
+        
+        # Get user and ISP ID for filtering
+        from models.models import User
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            await websocket.close(code=1008, reason="User not found")
+            return
+        
+        isp_id = user.isp_id
+        
+    except JWTError:
+        await websocket.close(code=1008, reason="Invalid token")
+        return
+    
     await websocket.accept()
     
-    # Subscribe to Redis pub/sub for real-time alerts
+    # Subscribe to ISP-specific Redis channel for real-time alerts
     pubsub = redis_client.pubsub()
-    pubsub.subscribe('alerts:new')
+    # Subscribe to ISP-specific channel for tenant isolation
+    pubsub.subscribe(f'alerts:new:{isp_id}')
     
     try:
         while True:
@@ -180,23 +214,26 @@ async def websocket_live_attacks(websocket: WebSocket):
                 try:
                     alert_data = json.loads(message['data'])
                     
-                    # Add location data
-                    alert_data['source_location'] = get_ip_location(alert_data.get('source_ip', 'unknown'))
-                    alert_data['target_location'] = get_ip_location(alert_data.get('target_ip', 'unknown'))
-                    
-                    # Send to WebSocket client
-                    await websocket.send_json({
-                        'type': 'new_attack',
-                        'data': alert_data
-                    })
+                    # Verify the alert belongs to this ISP (double-check)
+                    if alert_data.get('isp_id') == isp_id:
+                        # Add location data
+                        alert_data['source_location'] = get_ip_location(alert_data.get('source_ip', 'unknown'))
+                        alert_data['target_location'] = get_ip_location(alert_data.get('target_ip', 'unknown'))
+                        
+                        # Send to WebSocket client
+                        await websocket.send_json({
+                            'type': 'new_attack',
+                            'data': alert_data
+                        })
                 except json.JSONDecodeError:
+                    # Ignore malformed JSON messages
                     pass
             
             # Small delay to prevent busy waiting
             await asyncio.sleep(0.1)
             
     except WebSocketDisconnect:
-        print("WebSocket client disconnected")
+        print(f"WebSocket client disconnected (ISP: {isp_id})")
     finally:
         pubsub.close()
 

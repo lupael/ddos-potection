@@ -1,11 +1,10 @@
 """
 Prometheus metrics collector for DDoS protection platform
 """
-from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Gauge, Histogram, generate_latest
 from prometheus_client import CollectorRegistry
-import time
 from datetime import datetime, timedelta, timezone
-from typing import Dict
+from sqlalchemy import text
 
 from database import SessionLocal
 from models.models import Alert, TrafficLog, MitigationAction
@@ -150,7 +149,7 @@ class MetricsCollector:
         """Update alert-related metrics from database"""
         db = SessionLocal()
         try:
-            # Count active alerts by severity
+            # Count active alerts by ISP and severity
             from sqlalchemy import func
             
             active_alerts = db.query(
@@ -161,12 +160,10 @@ class MetricsCollector:
                 Alert.status == 'active'
             ).group_by(Alert.isp_id, Alert.severity).all()
             
-            # Clear existing gauges
-            for isp_id in [1]:  # Can expand to all ISPs
-                for severity in ['low', 'medium', 'high', 'critical']:
-                    alerts_active.labels(isp_id=str(isp_id), severity=severity).set(0)
+            # Clear existing gauges to remove stale labelsets
+            alerts_active.clear()
             
-            # Update gauges
+            # Update gauges with current counts
             for alert in active_alerts:
                 alerts_active.labels(
                     isp_id=str(alert.isp_id),
@@ -184,38 +181,63 @@ class MetricsCollector:
         try:
             from sqlalchemy import func
             
-            # Count active mitigations by type
+            # Count active mitigations by ISP and type
             active_mitigations = db.query(
+                Alert.isp_id,
                 MitigationAction.action_type,
                 func.count(MitigationAction.id).label('count')
+            ).join(
+                Alert,
+                MitigationAction.alert_id == Alert.id
             ).filter(
                 MitigationAction.status == 'active'
-            ).group_by(MitigationAction.action_type).all()
+            ).group_by(
+                Alert.isp_id,
+                MitigationAction.action_type
+            ).all()
             
-            # Clear existing gauges
-            for action_type in ['firewall', 'bgp_blackhole', 'flowspec', 'rate_limit']:
-                mitigations_active.labels(isp_id='1', action_type=action_type).set(0)
+            # Clear existing gauges so stale labelsets are removed
+            mitigations_active.clear()
             
-            # Update gauges
+            # Update gauges with current counts per ISP and action type
             for mitigation in active_mitigations:
                 mitigations_active.labels(
-                    isp_id='1',
+                    isp_id=str(mitigation.isp_id),
                     action_type=mitigation.action_type
                 ).set(mitigation.count)
             
-            # Calculate mitigation durations for completed mitigations
-            completed_mitigations = db.query(MitigationAction).filter(
+            # Track which mitigation IDs have already been observed to avoid
+            # repeatedly observing the same completed mitigations on each scrape.
+            # We attach the tracking set to the underlying function object so it is
+            # shared across instances but remains in-memory only.
+            func_obj = self.update_mitigation_metrics.__func__
+            if not hasattr(func_obj, "_observed_mitigation_ids"):
+                func_obj._observed_mitigation_ids = set()
+            observed_ids = func_obj._observed_mitigation_ids
+            
+            # Calculate mitigation durations for completed mitigations per ISP
+            completed_mitigations = db.query(
+                MitigationAction,
+                Alert.isp_id
+            ).join(
+                Alert,
+                MitigationAction.alert_id == Alert.id
+            ).filter(
                 MitigationAction.status == 'completed',
                 MitigationAction.completed_at.isnot(None),
                 MitigationAction.created_at >= datetime.now(timezone.utc) - timedelta(hours=1)
             ).all()
             
-            for mitigation in completed_mitigations:
+            for mitigation, isp_id in completed_mitigations:
+                # Only observe duration for mitigations we have not seen before
+                if mitigation.id in observed_ids:
+                    continue
                 duration = (mitigation.completed_at - mitigation.created_at).total_seconds()
                 mitigation_duration_seconds.labels(
-                    isp_id='1',
+                    isp_id=str(isp_id),
                     action_type=mitigation.action_type
                 ).observe(duration)
+                observed_ids.add(mitigation.id)
             
         except Exception as e:
             print(f"Error updating mitigation metrics: {e}")
@@ -271,17 +293,21 @@ class MetricsCollector:
                 )
                 r.ping()
                 system_health.labels(component='redis').set(1)
-            except:
+            except Exception:
                 system_health.labels(component='redis').set(0)
             
             # Check database connectivity
+            db = None
             try:
                 db = SessionLocal()
-                db.execute("SELECT 1")
-                db.close()
+                # Use text() wrapper for SQLAlchemy 2.x compatibility
+                db.execute(text("SELECT 1"))
                 system_health.labels(component='database').set(1)
-            except:
+            except Exception:
                 system_health.labels(component='database').set(0)
+            finally:
+                if db:
+                    db.close()
             
             # Check API health (always 1 if this code is running)
             system_health.labels(component='api').set(1)
@@ -304,6 +330,9 @@ class MetricsCollector:
 
 # Global metrics collector instance
 metrics_collector = MetricsCollector()
+
+# Content type for Prometheus metrics
+CONTENT_TYPE_LATEST = 'text/plain; version=0.0.4; charset=utf-8'
 
 
 def get_metrics_content():

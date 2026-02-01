@@ -63,9 +63,7 @@ rate(ddos_attacks_detected_total[5m])
 # Top attacked targets
 topk(10, ddos_attack_volume_packets)
 
-# Mitigation success rate
-sum(increase(ddos_mitigations_total{status="completed"}[1h])) 
-/ 
+# Mitigation rate (last hour)
 sum(increase(ddos_mitigations_total[1h]))
 
 # System health status

@@ -166,7 +166,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(ddos_traffic_packets_total[5m])",
+          "expr": "sum(rate(ddos_traffic_packets_total[5m]))",
           "refId": "A"
         }
       ],
@@ -303,7 +303,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(ddos_traffic_packets_total[5m])",
+          "expr": "sum by (protocol) (rate(ddos_traffic_packets_total[5m]))",
           "legendFormat": "{{protocol}}",
           "refId": "A"
         }
