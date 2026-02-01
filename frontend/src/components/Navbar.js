@@ -10,6 +10,7 @@ function Navbar({ onLogout }) {
         <Link to="/traffic">Traffic</Link>
         <Link to="/alerts">Alerts</Link>
         <Link to="/rules">Rules</Link>
+        <Link to="/bgp-blackholing">BGP/RTBH</Link>
         <Link to="/reports">Reports</Link>
         <Link to="/settings">Settings</Link>
         <button 

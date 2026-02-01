@@ -4,6 +4,65 @@
 
 BGP Blackholing, also known as Remotely Triggered Black Hole (RTBH), is a DDoS mitigation technique that allows you to drop traffic destined for a specific IP address or network at your upstream provider's edge routers, before it reaches your network and consumes bandwidth.
 
+### Web UI Access
+
+The platform provides a dedicated **BGP/RTBH** web interface for managing blackhole routes:
+
+- **Navigation**: Access via the main menu → **BGP/RTBH**
+- **Features**:
+  - 🚨 Announce blackhole routes with an intuitive form
+  - 🔴 Monitor active BGP blackholes in real-time
+  - 📊 View historical data and success rates
+  - ⚡ Quick withdraw with one-click actions
+  - 📈 Analytics dashboard with key metrics
+
+The web UI provides the easiest way to manage BGP blackholing without using the API or command-line tools.
+
+**UI Components:**
+1. **Analytics Overview**: Three key metrics cards showing:
+   - Active blackholes count (red indicator)
+   - Total mitigations in last 24 hours
+   - Success rate percentage with color-coded thresholds
+   
+2. **Announcement Form**: 
+   - Alert selection dropdown (populated from active alerts)
+   - Prefix input field with CIDR notation validation
+   - Optional next-hop override
+   - Reason/description field for audit trail
+   - Warning message about traffic impact
+   
+3. **Active Blackholes Table**:
+   - Real-time list of all active BGP blackhole routes
+   - Shows prefix, alert type, severity, target IP, and duration
+   - One-click withdraw button for each route
+   - Auto-refresh every 30 seconds
+   
+4. **Historical Data Table**:
+   - Last 24 hours of BGP blackhole mitigations
+   - Filtered to show only BGP blackhole actions
+   - Displays status, duration, and completion time
+   - Color-coded status badges (active, completed, failed)
+
+5. **Information Panel**:
+   - Quick reference about BGP blackholing
+   - Key benefits and characteristics
+   - Link to full documentation
+
+## Web UI Screenshots
+
+### BGP Blackholing Dashboard
+
+The BGP/RTBH page provides a comprehensive interface for managing BGP blackhole routes.
+
+**Key Features:**
+- **Analytics Cards**: Real-time metrics for active blackholes, 24-hour statistics, and success rates
+- **Announcement Form**: Easy-to-use interface for triggering new blackhole routes
+- **Active Blackholes Table**: Monitor all currently active BGP blackhole routes with one-click withdraw
+- **Historical Data**: View past mitigations with duration and status information
+- **Alert Integration**: Select from active alerts to quickly respond to attacks
+
+For a detailed visual layout of the UI, see [BGP UI Layout Documentation](screenshots/BGP-UI-LAYOUT.md).
+
 ### How RTBH Works
 
 1. **Detection**: The DDoS Protection Platform detects an attack targeting a specific IP
@@ -533,6 +592,37 @@ def _withdraw_bird(self, prefix: str) -> bool:
 ```
 
 ## Usage Examples
+
+### Via Web UI (Recommended)
+
+The easiest way to manage BGP blackholing is through the web interface:
+
+1. **Navigate to BGP/RTBH page**: Click on "BGP/RTBH" in the main navigation menu
+
+2. **View Active Blackholes**: See all currently active blackhole routes with:
+   - Prefix (IP/CIDR)
+   - Associated alert information
+   - Duration
+   - One-click withdraw button
+
+3. **Announce New Blackhole**:
+   - Click "➕ Announce Blackhole" button
+   - Select an active alert from the dropdown
+   - Enter the prefix (e.g., `203.0.113.50/32` for single IP)
+   - Optionally specify custom next-hop
+   - Add a reason/description
+   - Click "🚨 Announce Blackhole"
+
+4. **Monitor Statistics**:
+   - View active blackhole count
+   - Check 24-hour mitigation statistics
+   - Review success rates
+   - Browse historical data
+
+5. **Withdraw Blackhole**:
+   - Click "Withdraw" button next to active blackhole
+   - Confirm the action
+   - Traffic will resume to the target immediately
 
 ### Via API
 

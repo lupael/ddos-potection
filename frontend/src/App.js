@@ -8,6 +8,7 @@ import Rules from './pages/Rules';
 import Alerts from './pages/Alerts';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import BgpBlackholing from './pages/BgpBlackholing';
 
 function App() {
   const isAuthenticated = () => {
@@ -68,6 +69,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/bgp-blackholing"
+            element={
+              <PrivateRoute>
+                <BgpBlackholing />
               </PrivateRoute>
             }
           />
