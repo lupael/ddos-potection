@@ -52,10 +52,7 @@ The web UI provides the easiest way to manage BGP blackholing without using the 
 
 ### BGP Blackholing Dashboard
 
-The BGP/RTBH page provides a comprehensive interface for managing BGP blackhole routes:
-
-![BGP Blackholing Dashboard](screenshots/bgp-rtbh-dashboard.png)
-*Main dashboard showing active blackholes, analytics, and announcement form*
+The BGP/RTBH page provides a comprehensive interface for managing BGP blackhole routes.
 
 **Key Features:**
 - **Analytics Cards**: Real-time metrics for active blackholes, 24-hour statistics, and success rates
@@ -63,6 +60,8 @@ The BGP/RTBH page provides a comprehensive interface for managing BGP blackhole 
 - **Active Blackholes Table**: Monitor all currently active BGP blackhole routes with one-click withdraw
 - **Historical Data**: View past mitigations with duration and status information
 - **Alert Integration**: Select from active alerts to quickly respond to attacks
+
+For a detailed visual layout of the UI, see [BGP UI Layout Documentation](screenshots/BGP-UI-LAYOUT.md).
 
 ### How RTBH Works
 

@@ -470,7 +470,7 @@ function BgpBlackholing() {
           <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
             📖 For detailed setup instructions, see the{' '}
             <a
-              href="https://github.com/i4edubd/ddos-potection/blob/main/docs/BGP-RTBH.md"
+              href="https://github.com/i4edubd/ddos-protection/blob/main/docs/BGP-RTBH.md"
               target="_blank"
               rel="noopener noreferrer"
             >
