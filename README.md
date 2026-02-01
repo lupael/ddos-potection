@@ -32,6 +32,7 @@ Real-time traffic monitoring • Anomaly detection • Automated mitigation • 
 - [Monitoring](#-monitoring)
 - [Testing](#-testing)
 - [Documentation](#-documentation)
+- [Comparison with FastNetMon](#-comparison-with-fastnetmon)
 - [Contributing](#-contributing)
 - [License](#-license)
 - [Support](#-support)
@@ -481,6 +482,38 @@ cd frontend
 npm test
 ```
 
+## 🔄 Comparison with FastNetMon
+
+Wondering how we compare to commercial solutions like FastNetMon Advanced? We've got you covered!
+
+Our platform offers a **modern, open-source alternative** to commercial DDoS protection solutions. Here's a quick comparison:
+
+| Feature | Our Platform | FastNetMon Advanced |
+|---------|--------------|---------------------|
+| **License** | ✓ Open Source (MIT) | ❌ Commercial |
+| **Cost** | ✓ Free | ❌ Paid License |
+| **Multi-tenancy** | ✓ Full ISP support | ❌ Limited |
+| **Modern UI** | ✓ React Dashboard | ✓ Web UI |
+| **Customization** | ✓ Unlimited | ❌ Limited |
+| **Scale** | Up to 100Gbps+ | Up to 5Tbps |
+
+**Key Advantages:**
+- 🆓 **Zero licensing costs** - No expensive commercial licenses
+- 🔓 **Full source code access** - Customize anything you need
+- 🏢 **Built-in multi-tenancy** - Perfect for ISP service offerings
+- 🚀 **Modern tech stack** - React, FastAPI, PostgreSQL, Redis
+- 🐳 **Docker-first** - Deploy in minutes with Docker Compose
+- 💳 **Payment integration** - Stripe/PayPal for subscription billing
+
+**When to choose us:**
+- You want an open-source solution with no licensing fees
+- You need full customization capabilities
+- You're building a multi-tenant ISP DDoS protection service
+- Your network is under 100Gbps
+- You prefer modern web technologies and DevOps practices
+
+For a detailed feature-by-feature comparison, migration guide, and use case recommendations, see our **[FastNetMon Comparison Guide](docs/COMPARISON_FASTNETMON.md)**.
+
 ## 📖 Documentation
 
 - [Quick Start Guide](QUICKSTART.md)
@@ -490,6 +523,7 @@ npm test
 - [Monitoring & Alerting Guide](docs/MONITORING.md) - Comprehensive guide for Prometheus, Grafana, and notifications
 - [BGP Blackholing (RTBH) Guide](docs/BGP-RTBH.md) - Setup and use BGP-based DDoS mitigation
 - [Traffic Collection Guide](docs/TRAFFIC_COLLECTION.md)
+- [FastNetMon Comparison](docs/COMPARISON_FASTNETMON.md) - Detailed comparison with FastNetMon Advanced Edition
 - [Security Documentation](SECURITY.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
 
