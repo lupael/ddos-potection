@@ -70,6 +70,31 @@ export const mitigationService = {
   create: (mitigation) => api.post('/mitigation/', mitigation),
   execute: (id) => api.post(`/mitigation/${id}/execute`),
   stop: (id) => api.post(`/mitigation/${id}/stop`),
+  /**
+   * Get active mitigation status
+   * @returns {Promise} Response with { total, mitigations: Array }
+   *   Each mitigation contains { id, alert_id, action_type, status, details, 
+   *   created_at, duration_seconds, alert: { type, severity, target_ip, source_ip } }
+   *   NOTE: The nested alert object uses 'type' (not 'alert_type') as the property name.
+   *   This is different from the /alerts/ endpoint which uses 'alert_type'.
+   */
+  getActiveStatus: () => api.get('/mitigation/status/active'),
+  /**
+   * Get mitigation history
+   * @param {number} hours - Number of hours to look back (default: 24)
+   * @returns {Promise} Response with { period_hours, total_mitigations, history: Array, statistics }
+   *   Each history item contains { id, action_type, status, created_at, completed_at,
+   *   duration_seconds, alert: { id, type, severity, target_ip } }
+   *   NOTE: The nested alert object uses 'type' (not 'alert_type') as the property name.
+   *   This is different from the /alerts/ endpoint which uses 'alert_type'.
+   */
+  getHistory: (hours = 24) => api.get(`/mitigation/status/history?hours=${hours}`),
+  /**
+   * Get mitigation analytics
+   * @returns {Promise} Response with { period, total_mitigations, active_mitigations, 
+   *   success_rate_percent, most_used_types }
+   */
+  getAnalytics: () => api.get('/mitigation/status/analytics'),
 };
 
 // ISP endpoints

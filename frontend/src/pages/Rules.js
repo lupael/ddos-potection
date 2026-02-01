@@ -60,7 +60,6 @@ function Rules() {
         alert('Error creating rule');
       }
     }
-    }
   };
 
   const handleDelete = async (ruleId) => {

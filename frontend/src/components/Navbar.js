@@ -12,6 +12,7 @@ function Navbar({ onLogout }) {
         <Link to="/rules">Rules</Link>
         <Link to="/capture">Capture</Link>
         <Link to="/hostgroups">Hostgroups</Link>
+        <Link to="/bgp-blackholing">BGP/RTBH</Link>
         <Link to="/reports">Reports</Link>
         <Link to="/settings">Settings</Link>
         <button 
