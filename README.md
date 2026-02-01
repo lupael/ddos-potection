@@ -40,9 +40,20 @@ Real-time traffic monitoring • Anomaly detection • Automated mitigation • 
 
 ### Traffic Collection & Detection
 - **NetFlow/sFlow/IPFIX Support**: Collect traffic data from MikroTik, Cisco, and Juniper routers
+- **PCAP Capture**: Record packets with standard PCAP format for analysis
+- **AF_PACKET/AF_XDP**: High-performance packet capture for Linux systems
+- **VLAN Untagging**: Automatic removal of 802.1Q and 802.1ad VLAN tags
 - **Real-time Anomaly Detection**: Detect SYN floods, UDP floods, and other attack patterns
+- **Attack Fingerprinting**: Automatically capture attack traffic in PCAP format
 - **Entropy Analysis**: Identify distributed attacks using statistical analysis
 - **Redis Integration**: Fast real-time counters and event streaming
+
+### Threshold Management
+- **Hostgroups**: Configure per-subnet thresholds for packets/bytes/flows per second
+- **Longest Prefix Match**: Hierarchical subnet configuration with most specific match
+- **Default Thresholds**: System-wide defaults for networks without specific configuration
+- **Script Execution**: Trigger custom block/notify scripts when thresholds exceeded
+- **Dynamic Configuration**: Update thresholds without service restart
 
 ### Mitigation & Automation
 - **Automated Firewall Rules**: Support for iptables/nftables
@@ -284,6 +295,60 @@ curl -X POST http://localhost:8000/api/v1/alerts/1/resolve \
   -H "Authorization: Bearer <token>"
 ```
 
+### Packet Capture
+```bash
+# Start PCAP capture
+curl -X POST http://localhost:8000/api/v1/capture/start \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "interface": "eth0",
+    "capture_mode": "af_packet",
+    "duration": 60,
+    "filter_bpf": "tcp and port 80"
+  }'
+
+# List captures
+curl -X GET http://localhost:8000/api/v1/capture/list \
+  -H "Authorization: Bearer <token>"
+
+# Download PCAP file
+curl -X GET http://localhost:8000/api/v1/capture/download/capture_20260201_123456.pcap \
+  -H "Authorization: Bearer <token>" \
+  -o capture.pcap
+```
+
+### Hostgroups (Per-Subnet Thresholds)
+```bash
+# Create hostgroup
+curl -X POST http://localhost:8000/api/v1/hostgroups/ \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "customer_network_1",
+    "subnet": "192.168.1.0/24",
+    "thresholds": {
+      "packets_per_second": 10000,
+      "bytes_per_second": 100000000,
+      "flows_per_second": 1000
+    },
+    "scripts": {
+      "block": "/etc/ddos-protection/scripts/block.sh",
+      "notify": "/etc/ddos-protection/scripts/notify.sh"
+    }
+  }'
+
+# List hostgroups
+curl -X GET http://localhost:8000/api/v1/hostgroups/ \
+  -H "Authorization: Bearer <token>"
+
+# Check IP thresholds
+curl -X POST http://localhost:8000/api/v1/hostgroups/check-ip \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"ip": "192.168.1.50"}'
+```
+
 ## 🏗️ Architecture
 
 ```
@@ -421,6 +486,7 @@ npm test
 - [Quick Start Guide](QUICKSTART.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Development Guide](docs/DEVELOPMENT.md)
+- [Packet Capture & Thresholds Guide](docs/PACKET_CAPTURE.md) - PCAP, AF_PACKET, AF_XDP, VLAN untagging, and hostgroups
 - [Monitoring & Alerting Guide](docs/MONITORING.md) - Comprehensive guide for Prometheus, Grafana, and notifications
 - [BGP Blackholing (RTBH) Guide](docs/BGP-RTBH.md) - Setup and use BGP-based DDoS mitigation
 - [Traffic Collection Guide](docs/TRAFFIC_COLLECTION.md)
