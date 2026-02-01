@@ -243,7 +243,7 @@ curl -X POST http://localhost:8000/api/v1/rules/ \
     "rule_type": "ip_block",
     "condition": {
       "ip": "192.0.2.100",
-      "expires_at": "2024-12-31T23:59:59"
+      "expires_at": "2027-12-31T23:59:59"
     },
     "action": "block",
     "priority": 100

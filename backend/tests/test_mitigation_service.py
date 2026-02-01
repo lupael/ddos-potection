@@ -3,8 +3,7 @@ Tests for mitigation service enhancements
 """
 import pytest
 import subprocess
-from unittest.mock import Mock, patch, mock_open, MagicMock
-import os
+from unittest.mock import Mock, patch
 
 from services.mitigation_service import MitigationService, validate_prefix
 
@@ -204,6 +203,121 @@ class TestMitigationServiceFlowSpec:
         )
         
         assert result is True
+    
+    @patch('services.mitigation_service.settings')
+    def test_send_flowspec_malicious_tcp_flags(self, mock_settings, service):
+        """Test FlowSpec sanitizes malicious TCP flags"""
+        mock_settings.BGP_ENABLED = True
+        mock_settings.BGP_DAEMON = 'exabgp'
+        mock_settings.EXABGP_CMD_PIPE = '/var/run/exabgp.cmd'
+        
+        # TCP flags should be sanitized - only valid flags kept
+        with patch('services.mitigation_service.os.open') as mock_open:
+            with patch('services.mitigation_service.os.write') as mock_write:
+                with patch('services.mitigation_service.os.close'):
+                    mock_open.return_value = 3
+                    
+                    result = service.send_flowspec_rule(
+                        dest="192.0.2.100/32",
+                        protocol="tcp",
+                        tcp_flags="syn,malicious_command",
+                        action="drop"
+                    )
+                    
+                    # Should succeed and sanitize the flags
+                    assert result is True
+                    call_args = mock_write.call_args[0]
+                    command = call_args[1].decode()
+                    # Only 'syn' should be present, not 'malicious_command'
+                    assert 'tcp-flags' in command
+                    assert 'syn' in command
+                    assert 'malicious_command' not in command
+    
+    @patch('services.mitigation_service.settings')
+    def test_send_flowspec_malicious_action(self, mock_settings, service):
+        """Test FlowSpec rejects malicious action parameter"""
+        mock_settings.BGP_ENABLED = True
+        mock_settings.BGP_DAEMON = 'exabgp'
+        
+        # Malicious action with embedded command should fail
+        result = service.send_flowspec_rule(
+            dest="192.0.2.100/32",
+            protocol="tcp",
+            action="rate-limit 1000; rm -rf /"
+        )
+        
+        # Should reject malformed action
+        assert result is False
+    
+    @patch('services.mitigation_service.settings')
+    def test_send_flowspec_malicious_packet_length(self, mock_settings, service):
+        """Test FlowSpec rejects malicious packet_length"""
+        mock_settings.BGP_ENABLED = True
+        mock_settings.BGP_DAEMON = 'exabgp'
+        
+        # Malicious packet_length with special characters should fail
+        result = service.send_flowspec_rule(
+            dest="192.0.2.100/32",
+            protocol="tcp",
+            packet_length="100; malicious"
+        )
+        
+        # Should reject malformed packet_length
+        assert result is False
+    
+    @patch('services.mitigation_service.settings')
+    def test_send_flowspec_invalid_protocol(self, mock_settings, service):
+        """Test FlowSpec rejects invalid protocol"""
+        mock_settings.BGP_ENABLED = True
+        mock_settings.BGP_DAEMON = 'exabgp'
+        
+        # Invalid protocol should fail
+        result = service.send_flowspec_rule(
+            dest="192.0.2.100/32",
+            protocol="invalid; command"
+        )
+        
+        # Should reject invalid protocol
+        assert result is False
+    
+    @patch('services.mitigation_service.settings')
+    def test_send_flowspec_invalid_port_ranges(self, mock_settings, service):
+        """Test FlowSpec rejects invalid port numbers"""
+        mock_settings.BGP_ENABLED = True
+        mock_settings.BGP_DAEMON = 'exabgp'
+        
+        # Port out of range should fail
+        result = service.send_flowspec_rule(
+            dest="192.0.2.100/32",
+            protocol="tcp",
+            dest_port=99999
+        )
+        
+        assert result is False
+        
+        # Negative port should fail
+        result = service.send_flowspec_rule(
+            dest="192.0.2.100/32",
+            protocol="tcp",
+            source_port=-1
+        )
+        
+        assert result is False
+    
+    @patch('services.mitigation_service.settings')
+    def test_send_flowspec_invalid_dscp(self, mock_settings, service):
+        """Test FlowSpec rejects invalid DSCP values"""
+        mock_settings.BGP_ENABLED = True
+        mock_settings.BGP_DAEMON = 'exabgp'
+        
+        # DSCP out of range should fail
+        result = service.send_flowspec_rule(
+            dest="192.0.2.100/32",
+            protocol="tcp",
+            dscp=99
+        )
+        
+        assert result is False
 
 
 class TestMitigationServiceBGP:

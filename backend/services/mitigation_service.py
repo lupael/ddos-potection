@@ -455,22 +455,65 @@ class MitigationService:
                     'esp': '50',
                     'ah': '51'
                 }
-                proto_num = protocol_map.get(protocol.lower(), protocol)
+                proto_key = protocol.lower()
+                if proto_key in protocol_map:
+                    proto_num = protocol_map[proto_key]
+                else:
+                    try:
+                        proto_int = int(protocol)
+                    except (TypeError, ValueError):
+                        print(f"FlowSpec error: Invalid protocol value '{protocol}'")
+                        return False
+                    if proto_int < 0 or proto_int > 255:
+                        print(f"FlowSpec error: Protocol number out of range (0-255): {proto_int}")
+                        return False
+                    proto_num = str(proto_int)
                 flow_parts.append(f"protocol [ ={proto_num} ]")
             
             # Port specifications
             if source_port:
-                flow_parts.append(f"source-port [ ={source_port} ]")
+                try:
+                    port_int = int(source_port)
+                    if port_int < 1 or port_int > 65535:
+                        print(f"FlowSpec error: Source port out of range (1-65535): {port_int}")
+                        return False
+                    flow_parts.append(f"source-port [ ={port_int} ]")
+                except (TypeError, ValueError):
+                    print(f"FlowSpec error: Invalid source port '{source_port}'")
+                    return False
             if dest_port:
-                flow_parts.append(f"destination-port [ ={dest_port} ]")
+                try:
+                    port_int = int(dest_port)
+                    if port_int < 1 or port_int > 65535:
+                        print(f"FlowSpec error: Destination port out of range (1-65535): {port_int}")
+                        return False
+                    flow_parts.append(f"destination-port [ ={port_int} ]")
+                except (TypeError, ValueError):
+                    print(f"FlowSpec error: Invalid destination port '{dest_port}'")
+                    return False
             
             # Packet length
             if packet_length:
+                # Validate packet_length contains only safe characters
+                import re
+                if not re.match(r'^[<>=&0-9\s]+$', str(packet_length)):
+                    print(f"FlowSpec error: Invalid packet_length format '{packet_length}'")
+                    return False
                 flow_parts.append(f"packet-length [ {packet_length} ]")
             
             # DSCP
             if dscp is not None:
-                flow_parts.append(f"dscp [ ={dscp} ]")
+                try:
+                    dscp_int = int(dscp)
+                except (TypeError, ValueError):
+                    print("FlowSpec error: DSCP must be an integer between 0 and 63")
+                    return False
+
+                if dscp_int < 0 or dscp_int > 63:
+                    print("FlowSpec error: DSCP must be in the range 0-63")
+                    return False
+
+                flow_parts.append(f"dscp [ ={dscp_int} ]")
             
             # Fragment
             if fragment:
@@ -482,10 +525,22 @@ class MitigationService:
                 }
                 if fragment in fragment_map:
                     flow_parts.append(f"fragment [ {fragment_map[fragment]} ]")
+                else:
+                    print(f"FlowSpec warning: Invalid fragment type '{fragment}' ignored")
             
             # TCP flags
             if tcp_flags:
-                flow_parts.append(f"tcp-flags [ {tcp_flags} ]")
+                allowed_tcp_flags = {"syn", "ack", "fin", "rst", "push", "urgent"}
+                sanitized_flags = []
+                # Support values separated by spaces and/or commas
+                for flag in str(tcp_flags).replace(",", " ").split():
+                    normalized_flag = flag.lower()
+                    if normalized_flag in allowed_tcp_flags:
+                        sanitized_flags.append(normalized_flag)
+                    else:
+                        print(f"FlowSpec warning: Invalid TCP flag '{flag}' ignored")
+                if sanitized_flags:
+                    flow_parts.append(f"tcp-flags [ {' '.join(sanitized_flags)} ]")
             
             # Build command
             flow_rule = " ".join(flow_parts)
@@ -495,8 +550,15 @@ class MitigationService:
                 # Use traffic-rate 0 for drop
                 action_spec = "rate-limit 0"
             elif action.startswith("rate-limit"):
-                # Extract rate if specified
-                action_spec = action
+                # Validate and extract rate
+                import re
+                match = re.match(r'^rate-limit\s+(\d+)$', action)
+                if match:
+                    rate_value = match.group(1)
+                    action_spec = f"rate-limit {rate_value}"
+                else:
+                    print(f"FlowSpec error: Invalid action format '{action}'")
+                    return False
             else:
                 action_spec = "rate-limit 0"
             
@@ -541,12 +603,40 @@ class MitigationService:
                 flowspec_cmd += f' source-prefix {source}'
             if protocol:
                 protocol_map = {'tcp': '6', 'udp': '17', 'icmp': '1'}
-                proto_num = protocol_map.get(protocol.lower(), protocol)
+                mapped_proto = protocol_map.get(protocol.lower())
+                if mapped_proto is not None:
+                    proto_num = mapped_proto
+                else:
+                    try:
+                        proto_int = int(protocol)
+                    except (TypeError, ValueError):
+                        print(f"Invalid protocol value for FlowSpec: {protocol}")
+                        return False
+                    if proto_int < 0 or proto_int > 255:
+                        print(f"Protocol number out of valid range (0-255) for FlowSpec: {proto_int}")
+                        return False
+                    proto_num = str(proto_int)
                 flowspec_cmd += f' protocol {proto_num}'
             if dest_port:
-                flowspec_cmd += f' destination-port {dest_port}'
+                try:
+                    port_int = int(dest_port)
+                    if port_int < 1 or port_int > 65535:
+                        print(f"Destination port out of range (1-65535): {port_int}")
+                        return False
+                    flowspec_cmd += f' destination-port {port_int}'
+                except (TypeError, ValueError):
+                    print(f"Invalid destination port: {dest_port}")
+                    return False
             if source_port:
-                flowspec_cmd += f' source-port {source_port}'
+                try:
+                    port_int = int(source_port)
+                    if port_int < 1 or port_int > 65535:
+                        print(f"Source port out of range (1-65535): {port_int}")
+                        return False
+                    flowspec_cmd += f' source-port {port_int}'
+                except (TypeError, ValueError):
+                    print(f"Invalid source port: {source_port}")
+                    return False
             
             # Action
             if action == "drop":

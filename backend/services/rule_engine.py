@@ -3,9 +3,8 @@ Custom Rule Engine for DDoS Protection
 Evaluates and applies rules for rate limits, IP blocks, protocol filters, and geo-blocking
 """
 import ipaddress
-import subprocess
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+from datetime import datetime
 
 from database import SessionLocal
 from models.models import Rule
@@ -145,8 +144,13 @@ class RuleEngine:
             packets = traffic.get('packets', 0)
             window = condition.get('window', 60)
             
+            # Reject window=0 as invalid
+            if window <= 0:
+                print(f"Rate limit rule error: Invalid window value {window}, must be > 0")
+                return False
+            
             # Calculate packets per second
-            pps = packets / window if window > 0 else packets
+            pps = packets / window
             
             return pps > threshold
             
@@ -264,9 +268,9 @@ class RuleEngine:
                                    '/usr/share/GeoIP/GeoLite2-Country.mmdb')
             
             try:
-                reader = geoip2.database.Reader(geoip_db_path)
-                response = reader.country(ip_address)
-                return response.country.iso_code
+                with geoip2.database.Reader(geoip_db_path) as reader:
+                    response = reader.country(ip_address)
+                    return response.country.iso_code
             except (geoip2.errors.AddressNotFoundError, FileNotFoundError):
                 return None
             
@@ -313,6 +317,8 @@ class RuleEngine:
                 print(f"Alert triggered: {action['rule_name']}")
                 return True
             
+            # Log unexpected action types
+            print(f"Warning: Unknown action type '{action_type}' in rule")
             return False
             
         except Exception as e:
@@ -322,14 +328,13 @@ class RuleEngine:
     def cleanup_expired_rules(self):
         """Remove or deactivate rules that have expired"""
         try:
-            # Find rules with expiration dates
+            # Find all active rules; filter by expires_at in Python
             expired_rules = self.db.query(Rule).filter(
-                Rule.is_active == True,
-                Rule.condition.contains({'expires_at': ''})
+                Rule.is_active == True
             ).all()
             
             for rule in expired_rules:
-                expires_at_str = rule.condition.get('expires_at')
+                expires_at_str = rule.condition.get('expires_at') if isinstance(rule.condition, dict) else None
                 if expires_at_str:
                     try:
                         expires_at = datetime.fromisoformat(expires_at_str)
@@ -337,7 +342,7 @@ class RuleEngine:
                             rule.is_active = False
                             print(f"Deactivated expired rule: {rule.name}")
                     except ValueError:
-                        pass
+                        print(f"Invalid expires_at value for rule {rule.name}: {expires_at_str}")
             
             self.db.commit()
             
