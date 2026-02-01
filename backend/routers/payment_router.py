@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -37,15 +37,15 @@ class PaymentResponse(BaseModel):
 
 class StripePaymentIntent(BaseModel):
     subscription_id: Optional[int] = None
-    amount: Decimal
+    amount: Decimal = Field(gt=0, le=1000000, description="Payment amount must be positive and reasonable")
 
 class PayPalOrder(BaseModel):
     subscription_id: Optional[int] = None
-    amount: Decimal
+    amount: Decimal = Field(gt=0, le=1000000, description="Payment amount must be positive and reasonable")
 
 class BkashPayment(BaseModel):
     subscription_id: Optional[int] = None
-    amount: Decimal
+    amount: Decimal = Field(gt=0, le=1000000, description="Payment amount must be positive and reasonable")
     phone_number: str
 
 @router.get("/history", response_model=List[PaymentResponse])
@@ -86,6 +86,15 @@ async def create_stripe_payment_intent(
     """Create a Stripe payment intent (admin only)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Validate subscription ownership if subscription_id provided
+    if payment_data.subscription_id:
+        subscription = db.query(Subscription).filter(
+            Subscription.id == payment_data.subscription_id,
+            Subscription.isp_id == current_user.isp_id
+        ).first()
+        if not subscription:
+            raise HTTPException(status_code=404, detail="Subscription not found or access denied")
     
     try:
         # Get or create Stripe customer
@@ -188,6 +197,15 @@ async def create_paypal_order(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
+    # Validate subscription ownership if subscription_id provided
+    if payment_data.subscription_id:
+        subscription = db.query(Subscription).filter(
+            Subscription.id == payment_data.subscription_id,
+            Subscription.isp_id == current_user.isp_id
+        ).first()
+        if not subscription:
+            raise HTTPException(status_code=404, detail="Subscription not found or access denied")
+    
     # Note: This is a simplified version. In production, you would integrate with PayPal SDK
     # and create an actual order using PayPal API
     
@@ -222,6 +240,15 @@ async def create_bkash_payment(
     """Create a bKash payment (admin only)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Validate subscription ownership if subscription_id provided
+    if payment_data.subscription_id:
+        subscription = db.query(Subscription).filter(
+            Subscription.id == payment_data.subscription_id,
+            Subscription.isp_id == current_user.isp_id
+        ).first()
+        if not subscription:
+            raise HTTPException(status_code=404, detail="Subscription not found or access denied")
     
     # Note: This is a simplified version. In production, you would integrate with bKash API
     # bKash requires authentication and specific API calls

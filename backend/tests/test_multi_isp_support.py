@@ -2,9 +2,8 @@
 Unit tests for subscription management
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
-from unittest.mock import Mock, patch
 from fastapi import HTTPException
 
 # Mock imports - tests would run in the container with proper setup
@@ -91,7 +90,7 @@ class TestPaymentRouter:
         """Test generating an invoice"""
         subscription_id = 1
         # Should generate invoice with unique number
-        invoice_number = f"INV-1-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        invoice_number = f"INV-{subscription_id}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
         assert invoice_number.startswith("INV-")
 
 
@@ -100,21 +99,18 @@ class TestReportsRouter:
     
     def test_generate_pdf_report(self):
         """Test generating PDF report"""
-        report_type = "monthly"
         file_format = "pdf"
         # Should generate PDF file
         assert file_format == "pdf"
     
     def test_generate_csv_report(self):
         """Test generating CSV report"""
-        report_type = "weekly"
         file_format = "csv"
         # Should generate CSV file
         assert file_format == "csv"
     
     def test_generate_txt_report(self):
         """Test generating text report"""
-        report_type = "daily"
         file_format = "txt"
         # Should generate text file
         assert file_format == "txt"

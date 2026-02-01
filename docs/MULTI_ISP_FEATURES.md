@@ -18,19 +18,19 @@ This document describes the Multi-ISP support features implemented in the DDoS P
 - **Viewer**: Read-only access to dashboards and reports
 
 #### Implementation
-The system uses JWT-based authentication with role checks on every endpoint. Fine-grained permission decorators are available in `backend/utils/permissions.py`:
+The system uses JWT-based authentication with role checks on every endpoint. Fine-grained permission dependencies are available in `backend/utils/permissions.py`:
 
 ```python
-from utils.permissions import require_admin, require_role, admin_only
+from fastapi import Depends
+from utils.permissions import admin_only, admin_or_operator
 
-# Using decorator
-@require_admin
-async def admin_endpoint(current_user: User = Depends(get_current_user)):
+# Using dependency injection (recommended)
+@router.get("/admin-endpoint")
+async def admin_endpoint(current_user: User = Depends(admin_only)):
     ...
 
-# Using dependency injection
-@router.get("/endpoint")
-async def some_endpoint(current_user: User = Depends(admin_only)):
+@router.get("/operator-or-admin-endpoint")
+async def operator_or_admin_endpoint(current_user: User = Depends(admin_or_operator)):
     ...
 ```
 

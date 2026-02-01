@@ -82,6 +82,10 @@ async def create_subscription(
     if subscription_data.plan_name not in SUBSCRIPTION_PLANS:
         raise HTTPException(status_code=400, detail="Invalid subscription plan")
     
+    # Validate billing cycle
+    if subscription_data.billing_cycle not in ["monthly", "yearly"]:
+        raise HTTPException(status_code=400, detail="Invalid billing cycle. Must be 'monthly' or 'yearly'")
+    
     # Check if there's an active subscription
     active_sub = db.query(Subscription).filter(
         Subscription.isp_id == current_user.isp_id,

@@ -8,7 +8,6 @@ Run this script after updating models.py to create the new tables.
 """
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
 import os
 
 # Get database URL from environment

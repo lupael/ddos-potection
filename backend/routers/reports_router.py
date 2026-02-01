@@ -196,7 +196,10 @@ async def generate_report(
     ).first()
     
     # Mitigation statistics
-    mitigation_count = db.query(func.count(MitigationAction.id)).filter(
+    mitigation_count = db.query(func.count(MitigationAction.id)).join(
+        Alert, MitigationAction.alert_id == Alert.id
+    ).filter(
+        Alert.isp_id == current_user.isp_id,
         MitigationAction.created_at >= start_date
     ).scalar()
     
