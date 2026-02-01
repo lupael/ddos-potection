@@ -18,6 +18,52 @@ The platform provides a dedicated **BGP/RTBH** web interface for managing blackh
 
 The web UI provides the easiest way to manage BGP blackholing without using the API or command-line tools.
 
+**UI Components:**
+1. **Analytics Overview**: Three key metrics cards showing:
+   - Active blackholes count (red indicator)
+   - Total mitigations in last 24 hours
+   - Success rate percentage with color-coded thresholds
+   
+2. **Announcement Form**: 
+   - Alert selection dropdown (populated from active alerts)
+   - Prefix input field with CIDR notation validation
+   - Optional next-hop override
+   - Reason/description field for audit trail
+   - Warning message about traffic impact
+   
+3. **Active Blackholes Table**:
+   - Real-time list of all active BGP blackhole routes
+   - Shows prefix, alert type, severity, target IP, and duration
+   - One-click withdraw button for each route
+   - Auto-refresh every 30 seconds
+   
+4. **Historical Data Table**:
+   - Last 24 hours of BGP blackhole mitigations
+   - Filtered to show only BGP blackhole actions
+   - Displays status, duration, and completion time
+   - Color-coded status badges (active, completed, failed)
+
+5. **Information Panel**:
+   - Quick reference about BGP blackholing
+   - Key benefits and characteristics
+   - Link to full documentation
+
+## Web UI Screenshots
+
+### BGP Blackholing Dashboard
+
+The BGP/RTBH page provides a comprehensive interface for managing BGP blackhole routes:
+
+![BGP Blackholing Dashboard](screenshots/bgp-rtbh-dashboard.png)
+*Main dashboard showing active blackholes, analytics, and announcement form*
+
+**Key Features:**
+- **Analytics Cards**: Real-time metrics for active blackholes, 24-hour statistics, and success rates
+- **Announcement Form**: Easy-to-use interface for triggering new blackhole routes
+- **Active Blackholes Table**: Monitor all currently active BGP blackhole routes with one-click withdraw
+- **Historical Data**: View past mitigations with duration and status information
+- **Alert Integration**: Select from active alerts to quickly respond to attacks
+
 ### How RTBH Works
 
 1. **Detection**: The DDoS Protection Platform detects an attack targeting a specific IP
