@@ -260,7 +260,7 @@ ddos-potection/
 - **GitHub Issues**: Report bugs or ask questions
 - **Discussions**: General questions and ideas
 - **Discord**: Real-time chat (coming soon)
-- **Email**: support@example.com
+- **Email**: support@ispbills.com
 
 ## Recognition
 
