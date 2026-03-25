@@ -208,7 +208,7 @@ This document provides a security assessment of the DDoS Protection Platform imp
 ## Security Contacts
 
 For security issues:
-- **Email**: security@example.com
+- **Email**: support@ispbills.com
 - **GitHub**: Use private security advisories
 - **PGP Key**: Available on request
 

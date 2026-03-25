@@ -439,4 +439,4 @@ GET /api/v1/traffic-collection/detection/stats
 
 For issues or questions:
 - GitHub Issues: https://github.com/i4edubd/ddos-protection/issues
-- Email: support@example.com
+- Email: support@ispbills.com

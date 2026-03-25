@@ -477,4 +477,4 @@ npm install
 
 - GitHub Issues: https://github.com/i4edubd/ddos-potection/issues
 - Discord: [Join our server]
-- Email: dev@example.com
+- Email: support@ispbills.com
