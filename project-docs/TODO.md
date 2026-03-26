@@ -79,6 +79,12 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 
 ---
 
+- [x] **[Docs] Add 25 UI screenshots to `docs/screenshots/`**
+  - Captured all 17 pages + 8 extra states (error, modals, mobile, full-page, 404)
+  - Files: `docs/screenshots/01-login.png` through `docs/screenshots/25-404-not-found.png`
+
+---
+
 ## 🟡 Medium Priority
 
 - [x] **[Frontend] TypeScript migration for API service layer**
