@@ -15,6 +15,7 @@ from routers.auth_router import get_current_user
 import redis
 from config import settings
 from jose import jwt, JWTError
+from services.geoip_service import geoip_service
 
 router = APIRouter()
 
@@ -238,34 +239,8 @@ async def websocket_live_attacks(
         pubsub.close()
 
 
-def get_ip_location(ip_address: str) -> Dict:
-    """
-    Get geographic location for an IP address
-    In production, use a GeoIP service like MaxMind or ip-api.com
-    
-    For now, returns placeholder data
-    """
-    if not ip_address or ip_address == 'unknown':
+def get_ip_location(ip_address: str) -> dict:
+    """Return geographic location for an IP address using GeoIPService."""
+    if not ip_address or ip_address == "unknown":
         return None
-    
-    # Placeholder implementation
-    # In production, integrate with GeoIP database or API
-    # Example with ip-api.com (free tier):
-    # response = requests.get(f"http://ip-api.com/json/{ip_address}")
-    # data = response.json()
-    # return {'lat': data['lat'], 'lon': data['lon'], 'country': data['country'], 'city': data['city']}
-    
-    # For demo purposes, assign random-ish locations based on IP hash
-    import hashlib
-    hash_val = int(hashlib.md5(ip_address.encode()).hexdigest(), 16)
-    
-    # Generate pseudo-random coordinates within reasonable ranges
-    lat = (hash_val % 180) - 90  # -90 to 90
-    lon = ((hash_val // 180) % 360) - 180  # -180 to 180
-    
-    return {
-        'lat': lat / 1.0,
-        'lon': lon / 1.0,
-        'country': 'Unknown',
-        'city': 'Unknown'
-    }
+    return geoip_service.lookup(ip_address)

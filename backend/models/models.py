@@ -34,6 +34,8 @@ class User(Base):
     isp_id = Column(Integer, ForeignKey("isps.id"))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    totp_secret = Column(String(64), nullable=True)
+    totp_enabled = Column(Boolean, default=False)
     
     isp = relationship("ISP", back_populates="users")
 
@@ -206,3 +208,15 @@ class Webhook(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class FlowSource(Base):
+    """Registered NetFlow/IPFIX/sFlow source routers for authentication."""
+    __tablename__ = "flow_sources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"), nullable=False, index=True)
+    source_ip = Column(String(45), nullable=False, index=True)  # Router IP
+    description = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

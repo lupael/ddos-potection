@@ -21,6 +21,9 @@ from routers import (
 )
 from routers.sla_router import router as sla_router
 from routers.webhook_router import router as webhook_router
+from routers.threat_intel_router import router as threat_intel_router
+from routers.totp_router import router as totp_router
+from routers.flow_source_router import router as flow_source_router
 from middleware.audit_middleware import AuditMiddleware
 from database import engine, Base, get_db
 from config import settings
@@ -72,6 +75,9 @@ app.include_router(capture_router.router)  # Already has prefix in router defini
 app.include_router(traffic_collection_router.router, prefix="/api/v1/traffic-collection", tags=["Traffic Collection"])
 app.include_router(sla_router)
 app.include_router(webhook_router)
+app.include_router(threat_intel_router)
+app.include_router(totp_router, prefix="/api/v1/auth")
+app.include_router(flow_source_router)
 
 @app.get("/")
 async def root():

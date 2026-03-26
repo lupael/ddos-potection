@@ -22,7 +22,11 @@ class NotificationService:
         self.sms_enabled = False  # Will be enabled if Twilio credentials are provided
         self.slack_enabled = bool(getattr(settings, 'SLACK_WEBHOOK_URL', ''))
         self.teams_enabled = bool(getattr(settings, 'TEAMS_WEBHOOK_URL', ''))
-        
+        self.pagerduty_enabled = bool(
+            getattr(settings, 'PAGERDUTY_ENABLED', False)
+            and getattr(settings, 'PAGERDUTY_INTEGRATION_KEY', '')
+        )
+
         # Check for Twilio credentials
         if hasattr(settings, 'TWILIO_ACCOUNT_SID') and hasattr(settings, 'TWILIO_AUTH_TOKEN'):
             self.sms_enabled = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN)
@@ -160,6 +164,70 @@ class NotificationService:
             return True
         except Exception as e:
             print(f"Error sending Teams message: {e}")
+            return False
+
+    async def send_pagerduty(
+        self,
+        summary: str,
+        severity: str,
+        source: str,
+        custom_details: dict = None,
+        dedup_key: str = None,
+    ) -> bool:
+        """Send PagerDuty Events API v2 alert (trigger)."""
+        if not self.pagerduty_enabled:
+            print("PagerDuty notifications not configured")
+            return False
+
+        import uuid
+        payload = {
+            "routing_key": settings.PAGERDUTY_INTEGRATION_KEY,
+            "event_action": "trigger",
+            "dedup_key": dedup_key or str(uuid.uuid4()),
+            "payload": {
+                "summary": summary,
+                "severity": severity,
+                "source": source,
+                "custom_details": custom_details or {},
+            },
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://events.pagerduty.com/v2/enqueue",
+                    json=payload,
+                    timeout=10,
+                )
+                response.raise_for_status()
+            print(f"PagerDuty alert sent: {summary}")
+            return True
+        except Exception as exc:
+            print(f"Error sending PagerDuty alert: {exc}")
+            return False
+
+    async def send_pagerduty_resolve(self, dedup_key: str) -> bool:
+        """Send PagerDuty resolve event to close an open incident."""
+        if not self.pagerduty_enabled:
+            print("PagerDuty notifications not configured")
+            return False
+
+        payload = {
+            "routing_key": settings.PAGERDUTY_INTEGRATION_KEY,
+            "event_action": "resolve",
+            "dedup_key": dedup_key,
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://events.pagerduty.com/v2/enqueue",
+                    json=payload,
+                    timeout=10,
+                )
+                response.raise_for_status()
+            print(f"PagerDuty incident resolved: {dedup_key}")
+            return True
+        except Exception as exc:
+            print(f"Error resolving PagerDuty incident: {exc}")
             return False
 
     def format_alert_slack(self, alert: Dict) -> str:

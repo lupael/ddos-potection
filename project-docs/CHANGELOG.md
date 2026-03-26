@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Tasks 11–20: Integration Services & Platform Features
+- **Task 11 — GeoIP MaxMind GeoLite2 Integration**: `services/geoip_service.py` with `GeoIPService`
+  class; falls back to deterministic hash-based stub coordinates when DB unavailable.
+  `attack_map_router.py` updated to use `GeoIPService`. Added `GEOIP_CITY_DB_PATH` to config.
+- **Task 12 — Threat Intelligence Feed Ingestion**: `services/threat_intel.py` with `ThreatIntelService`
+  (Spamhaus DROP/EDROP, CINS Army, Feodo Tracker); Redis SET storage, O(1) lookup, feed stats.
+  `routers/threat_intel_router.py` with GET stats, GET check/{ip}, POST refresh (admin).
+  Config: `THREAT_INTEL_ENABLED`, `THREAT_INTEL_REFRESH_INTERVAL`.
+- **Task 13 — PagerDuty Integration**: `send_pagerduty()` and `send_pagerduty_resolve()` added to
+  `NotificationService`. Config: `PAGERDUTY_INTEGRATION_KEY`, `PAGERDUTY_ENABLED`.
+- **Task 14 — SIEM Export (Syslog RFC-5424 + CEF)**: `services/siem_exporter.py` with `SIEMExporter`;
+  UDP delivery, RFC 5424 and CEF formatting. Config: `SIEM_ENABLED`, `SIEM_HOST`, `SIEM_PORT`,
+  `SIEM_FORMAT`, `SIEM_FACILITY`.
+- **Task 15 — Cisco/Juniper/Arista Router ACL Push**: `services/router_drivers.py` with
+  `CiscoIOSDriver` (Netmiko), `JuniperDriver` (NAPALM), `AristaEOSDriver` (Netmiko), and
+  `RouterACLService` factory; graceful fallback when libraries are not installed.
+- **Task 16 — NetBox IPAM Sync**: `services/netbox_sync.py` with `NetboxSyncService`; prefix fetch,
+  DB upsert, journal entry push, IP info lookup. Config: `NETBOX_URL`, `NETBOX_TOKEN`, `NETBOX_ENABLED`.
+- **Task 17 — SNMP Trap Sender**: `services/snmp_sender.py` with `SNMPTrapSender`; SNMPv2c traps via
+  pysnmp (preferred) or minimal BER/UDP socket encoder. Config: `SNMP_ENABLED`, `SNMP_MANAGER_HOST`,
+  `SNMP_MANAGER_PORT`, `SNMP_COMMUNITY`, `SNMP_ENTERPRISE_OID`.
+- **Task 18 — Kafka Flow Pipeline**: `services/kafka_consumer.py` with `KafkaFlowProducer` and
+  `KafkaFlowConsumer` (aiokafka). `TrafficCollector.publish_to_kafka()` added. Config: `KAFKA_ENABLED`,
+  `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_FLOW_TOPIC`, `KAFKA_CONSUMER_GROUP`.
+- **Task 19 — TOTP 2FA**: `totp_secret` and `totp_enabled` fields on `User` model.
+  `routers/totp_router.py` with setup/verify/disable/validate endpoints (pyotp).
+- **Task 20 — Flow Source Authentication**: `FlowSource` model in `models/models.py`.
+  `services/flow_auth.py` with `FlowAuthenticator` (Redis-cached DB lookup). 
+  `routers/flow_source_router.py` with CRUD endpoints.
+
 #### Security & Reliability
 - **`/health/live`** and **`/health/ready`** Kubernetes probe endpoints in `main.py`.
   `live` always returns 200; `ready` checks PostgreSQL + Redis connectivity (returns 503 if either is down).

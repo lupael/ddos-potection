@@ -48,15 +48,13 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
   - File: `backend/services/anomaly_detector.py`
   - Added: `detect_tcp_rst_flood` and `detect_tcp_ack_flood` using Redis counters.
 
-- [ ] **[GeoIP] Replace placeholder coordinates in attack map**
+- [x] **[GeoIP] Replace placeholder coordinates in attack map**
   - File: `backend/routers/attack_map_router.py`
-  - Current implementation returns hardcoded/random coordinates
-  - Fix: integrate MaxMind GeoLite2 (`geoip2` Python library, free DB download on startup)
+  - Fixed: `services/geoip_service.py` with MaxMind GeoLite2 integration and hash-based stub fallback.
 
-- [ ] **[Scale] Wire Kafka for flow pipeline**
+- [x] **[Scale] Wire Kafka for flow pipeline**
   - `aiokafka` is already in `requirements.txt` but not used
-  - Files: `backend/services/traffic_collector.py`, new `backend/services/kafka_consumer.py`
-  - Provide `KAFKA_ENABLED=false` env flag to keep Redis Streams fallback
+  - Fixed: `services/kafka_consumer.py` with `KafkaFlowProducer`/`KafkaFlowConsumer`; `TrafficCollector.publish_to_kafka()` added; `KAFKA_ENABLED=false` fallback.
 
 - [ ] **[Config] Refactor `config.py` into sub-models**
   - File: `backend/config.py`
@@ -95,10 +93,11 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
   - File: `backend/services/traffic_collector.py`
   - Spread UDP receive across N CPU cores using `SO_REUSEPORT`
 
-- [ ] **[Threat intel] Threat intelligence feed ingestion**
+- [x] **[Threat intel] Threat intelligence feed ingestion**
   - New file: `backend/services/threat_intel.py`
   - Sources: Spamhaus DROP/EDROP, Emerging Threats, CINS Army, Feodo Tracker
   - Refresh hourly via Celery beat; store in Redis SET for O(1) lookup
+  - Router: `backend/routers/threat_intel_router.py`
 
 - [x] **[Auth] Webhook system with HMAC-SHA256 signatures**
   - New files: `backend/services/webhook_service.py`, `backend/routers/webhook_router.py`
@@ -122,10 +121,11 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 
 - [ ] **[Frontend] Dark mode / theming**
 - [ ] **[API] GraphQL endpoint** alongside REST
-- [ ] **[Reporting] Two-Factor Authentication (TOTP)**
+- [x] **[Reporting] Two-Factor Authentication (TOTP)**
+  - `routers/totp_router.py`: setup/verify/disable/validate; `User.totp_secret` + `totp_enabled`
 - [ ] **[Mobile] React Native companion app**
-- [ ] **[Integration] Netbox IPAM sync** (`backend/services/netbox_sync.py`)
-- [ ] **[Integration] SNMP trap sender** for Zabbix/Nagios
+- [x] **[Integration] Netbox IPAM sync** (`backend/services/netbox_sync.py`)
+- [x] **[Integration] SNMP trap sender** for Zabbix/Nagios (`backend/services/snmp_sender.py`)
 - [ ] **[Analytics] Attack campaign tracking** across ISP tenants
 - [ ] **[Analytics] Traffic forecasting** (ARIMA/Prophet) for capacity planning
 - [ ] **[DevOps] Helm chart** for Kubernetes deployment

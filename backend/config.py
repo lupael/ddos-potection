@@ -164,6 +164,40 @@ class Settings(BaseSettings):
     
     # GeoIP Configuration (for geo-blocking)
     GEOIP_DATABASE_PATH: str = "/usr/share/GeoIP/GeoLite2-Country.mmdb"
+    GEOIP_CITY_DB_PATH: str = "/usr/share/GeoIP/GeoLite2-City.mmdb"
+
+    # Threat Intelligence
+    THREAT_INTEL_ENABLED: bool = True
+    THREAT_INTEL_REFRESH_INTERVAL: int = 3600  # seconds
+
+    # PagerDuty
+    PAGERDUTY_INTEGRATION_KEY: str = ""
+    PAGERDUTY_ENABLED: bool = False
+
+    # SIEM Export
+    SIEM_ENABLED: bool = False
+    SIEM_HOST: str = ""
+    SIEM_PORT: int = 514
+    SIEM_FORMAT: str = "cef"  # "cef" or "syslog"
+    SIEM_FACILITY: int = 16   # local0
+
+    # NetBox IPAM
+    NETBOX_URL: str = ""
+    NETBOX_TOKEN: str = ""
+    NETBOX_ENABLED: bool = False
+
+    # SNMP Traps
+    SNMP_ENABLED: bool = False
+    SNMP_MANAGER_HOST: str = ""
+    SNMP_MANAGER_PORT: int = 162
+    SNMP_COMMUNITY: str = "public"
+    SNMP_ENTERPRISE_OID: str = "1.3.6.1.4.1.99999"
+
+    # Kafka Flow Pipeline
+    KAFKA_ENABLED: bool = False
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_FLOW_TOPIC: str = "ddos-flows"
+    KAFKA_CONSUMER_GROUP: str = "ddos-detector"
     
     # Packet Capture Configuration
     PCAP_ENABLED: bool = True  # Enable PCAP capture features

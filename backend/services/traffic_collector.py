@@ -468,6 +468,25 @@ class TrafficCollector:
             
         except Exception as e:
             print(f"Error publishing to Redis stream: {e}")
+
+    def publish_to_kafka(self, flow: Dict[str, Any]) -> None:
+        """Publish flow to Kafka if enabled, otherwise fall back to Redis Streams."""
+        if settings.KAFKA_ENABLED:
+            try:
+                from services.kafka_consumer import KafkaFlowProducer
+                import asyncio
+                producer = KafkaFlowProducer()
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(producer.start())
+                    loop.run_until_complete(producer.publish_flow(flow))
+                finally:
+                    loop.run_until_complete(producer.stop())
+                    loop.close()
+                return
+            except Exception as exc:
+                print(f"Kafka publish failed, falling back to Redis: {exc}")
+        self.publish_to_redis_stream(flow)
     
     def store_traffic(self, flow: Dict[str, Any], isp_id: int = 1):
         """
