@@ -1,96 +1,116 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 function Navbar({ onLogout }) {
-  const [showTrafficMenu, setShowTrafficMenu] = useState(false);
+  const [showCollectionMenu, setShowCollectionMenu] = useState(false);
   const dropdownRef = useRef(null);
+  const location = useLocation();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowTrafficMenu(false);
+        setShowCollectionMenu(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleKeyDown = (event) => {
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      setShowTrafficMenu(!showTrafficMenu);
-    } else if (event.key === ' ') {
-      event.preventDefault();
-      setShowTrafficMenu(!showTrafficMenu);
+      setShowCollectionMenu(!showCollectionMenu);
     } else if (event.key === 'Escape') {
-      setShowTrafficMenu(false);
+      setShowCollectionMenu(false);
     }
   };
 
+  const isActive = (path) => location.pathname === path ? 'active' : '';
+
+  const collectionPaths = ['/traffic-collection', '/anomaly-detection', '/entropy-analysis'];
+  const collectionActive = collectionPaths.includes(location.pathname);
+
   return (
-    <div className="navbar">
-      <h1>🛡️ DDoS Protection Platform</h1>
-      <nav>
-        <Link to="/">Dashboard</Link>
-        <Link to="/traffic">Traffic</Link>
-        
-        {/* Traffic Collection & Detection Dropdown */}
-        <div 
+    <header className="navbar" role="banner">
+      {/* Brand */}
+      <Link to="/" className="navbar-brand">
+        <div className="navbar-brand-icon" aria-hidden="true">🛡️</div>
+        <h1>DDoS Shield</h1>
+      </Link>
+
+      {/* Navigation links */}
+      <nav aria-label="Main navigation">
+        <Link to="/" className={isActive('/')}>
+          📊 Dashboard
+        </Link>
+        <Link to="/traffic" className={isActive('/traffic')}>
+          📡 Traffic
+        </Link>
+
+        {/* Collection & Detection dropdown */}
+        <div
           className="dropdown"
           ref={dropdownRef}
-          onMouseEnter={() => setShowTrafficMenu(true)}
-          onMouseLeave={() => setShowTrafficMenu(false)}
+          data-open={showCollectionMenu}
+          onMouseEnter={() => setShowCollectionMenu(true)}
+          onMouseLeave={() => setShowCollectionMenu(false)}
         >
           <button
-            className="dropdown-trigger"
-            onClick={() => setShowTrafficMenu(!showTrafficMenu)}
+            className={`dropdown-trigger${collectionActive ? ' active' : ''}`}
+            onClick={() => setShowCollectionMenu(!showCollectionMenu)}
             onKeyDown={handleKeyDown}
             aria-haspopup="true"
-            aria-expanded={showTrafficMenu}
+            aria-expanded={showCollectionMenu}
           >
-            Collection & Detection ▼
+            🔍 Detection
+            <span className="dropdown-chevron">▼</span>
           </button>
-          {showTrafficMenu && (
+
+          {showCollectionMenu && (
             <div className="dropdown-menu" role="menu">
-              <Link to="/traffic-collection" role="menuitem">
-                Traffic Collection
+              <div className="dropdown-menu-header">Collection &amp; Analysis</div>
+              <Link to="/traffic-collection" role="menuitem" onClick={() => setShowCollectionMenu(false)}>
+                <span className="dropdown-menu-icon">📥</span> Traffic Collection
               </Link>
-              <Link to="/anomaly-detection" role="menuitem">
-                Anomaly Detection
+              <Link to="/anomaly-detection" role="menuitem" onClick={() => setShowCollectionMenu(false)}>
+                <span className="dropdown-menu-icon">⚠️</span> Anomaly Detection
               </Link>
-              <Link to="/entropy-analysis" role="menuitem">
-                Entropy Analysis
+              <Link to="/entropy-analysis" role="menuitem" onClick={() => setShowCollectionMenu(false)}>
+                <span className="dropdown-menu-icon">📈</span> Entropy Analysis
               </Link>
             </div>
           )}
         </div>
-        
-        <Link to="/alerts">Alerts</Link>
-        <Link to="/rules">Rules</Link>
-        <Link to="/capture">Capture</Link>
-        <Link to="/hostgroups">Hostgroups</Link>
-        <Link to="/bgp-blackholing">BGP/RTBH</Link>
-        <Link to="/reports">Reports</Link>
-        <Link to="/settings">Settings</Link>
-        <button 
-          onClick={onLogout} 
-          style={{
-            background: 'rgba(255,255,255,0.2)',
-            border: 'none',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Logout
+
+        <Link to="/alerts" className={isActive('/alerts')}>
+          🚨 Alerts
+        </Link>
+        <Link to="/rules" className={isActive('/rules')}>
+          📋 Rules
+        </Link>
+        <Link to="/bgp-blackholing" className={isActive('/bgp-blackholing')}>
+          🌐 BGP/RTBH
+        </Link>
+        <Link to="/capture" className={isActive('/capture')}>
+          🔬 Capture
+        </Link>
+        <Link to="/hostgroups" className={isActive('/hostgroups')}>
+          🖥️ Hosts
+        </Link>
+        <Link to="/reports" className={isActive('/reports')}>
+          📄 Reports
+        </Link>
+        <Link to="/settings" className={isActive('/settings')}>
+          ⚙️ Settings
+        </Link>
+
+        <div className="navbar-divider" role="separator" aria-hidden="true" />
+
+        <button className="navbar-logout" onClick={onLogout} aria-label="Log out">
+          🚪 Logout
         </button>
       </nav>
-    </div>
+    </header>
   );
 }
 

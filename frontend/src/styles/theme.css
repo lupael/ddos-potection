@@ -1,47 +1,107 @@
-/* DDoS Protection Platform — theme variables */
+/* DDoS Protection Platform — Enterprise Design System */
 
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --accent: #1a73e8;
-  --border: #dddddd;
-  --danger: #d93025;
-  --success: #1e8e3e;
-  --warning: #f9ab00;
+  /* Brand / Neutrals */
+  --color-navy-900: #0f172a;
+  --color-navy-800: #1e293b;
+  --color-navy-700: #334155;
+  --color-navy-600: #475569;
+  --color-navy-500: #64748b;
+  --color-navy-400: #94a3b8;
+  --color-navy-300: #cbd5e1;
+  --color-navy-200: #e2e8f0;
+  --color-navy-100: #f1f5f9;
+  --color-navy-50:  #f8fafc;
+
+  /* Accent – Blue */
+  --color-blue-700: #1d4ed8;
+  --color-blue-600: #2563eb;
+  --color-blue-500: #3b82f6;
+  --color-blue-400: #60a5fa;
+  --color-blue-100: #dbeafe;
+  --color-blue-50:  #eff6ff;
+
+  /* Success – Green */
+  --color-green-700: #047857;
+  --color-green-600: #059669;
+  --color-green-500: #10b981;
+  --color-green-100: #d1fae5;
+  --color-green-50:  #ecfdf5;
+
+  /* Warning – Amber */
+  --color-amber-700: #b45309;
+  --color-amber-600: #d97706;
+  --color-amber-500: #f59e0b;
+  --color-amber-100: #fef3c7;
+  --color-amber-50:  #fffbeb;
+
+  /* Danger – Red */
+  --color-red-700: #b91c1c;
+  --color-red-600: #dc2626;
+  --color-red-500: #ef4444;
+  --color-red-100: #fee2e2;
+  --color-red-50:  #fef2f2;
+
+  /* Purple */
+  --color-purple-600: #7c3aed;
+  --color-purple-100: #ede9fe;
+
+  /* Semantic tokens */
+  --bg-page:       var(--color-navy-100);
+  --bg-surface:    #ffffff;
+  --bg-sidebar:    var(--color-navy-900);
+  --bg-sidebar-hover: var(--color-navy-800);
+  --bg-navbar:     var(--color-navy-900);
+
+  --text-primary:   var(--color-navy-900);
+  --text-secondary: var(--color-navy-600);
+  --text-muted:     var(--color-navy-400);
+  --text-inverse:   #ffffff;
+  --text-accent:    var(--color-blue-600);
+
+  --border-default: var(--color-navy-200);
+  --border-focus:   var(--color-blue-500);
+
+  --accent:         var(--color-blue-500);
+  --accent-dark:    var(--color-blue-700);
+  --success:        var(--color-green-600);
+  --warning:        var(--color-amber-600);
+  --danger:         var(--color-red-600);
+
+  --shadow-sm:   0 1px 3px 0 rgba(0,0,0,.08), 0 1px 2px -1px rgba(0,0,0,.06);
+  --shadow-md:   0 4px 6px -1px rgba(0,0,0,.08), 0 2px 4px -2px rgba(0,0,0,.06);
+  --shadow-lg:   0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.05);
+  --shadow-xl:   0 20px 25px -5px rgba(0,0,0,.1),  0 8px 10px -6px rgba(0,0,0,.05);
+
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+
+  --transition: 0.2s ease;
 }
 
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2d2d2d;
-    --text-primary: #e0e0e0;
-    --text-secondary: #aaaaaa;
-    --accent: #4a9ef8;
-    --border: #444444;
-    --danger: #f28b82;
-    --success: #81c995;
-    --warning: #fdd663;
+    --bg-page:    var(--color-navy-900);
+    --bg-surface: var(--color-navy-800);
+    --text-primary:   #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-default: var(--color-navy-700);
   }
 }
 
-/* Manual dark mode class for toggle support */
 .dark-mode {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #2d2d2d;
-  --text-primary: #e0e0e0;
-  --text-secondary: #aaaaaa;
-  --accent: #4a9ef8;
-  --border: #444444;
-  --danger: #f28b82;
-  --success: #81c995;
-  --warning: #fdd663;
+  --bg-page:    var(--color-navy-900);
+  --bg-surface: var(--color-navy-800);
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-default: var(--color-navy-700);
 }
 
-/* Utility classes */
 body {
-  background-color: var(--bg-primary);
+  background-color: var(--bg-page);
   color: var(--text-primary);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color var(--transition), color var(--transition);
 }

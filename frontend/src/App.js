@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './styles/App.css';
+import './styles/theme.css';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import TrafficMonitor from './pages/TrafficMonitor';
@@ -10,6 +11,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PacketCapture from './pages/PacketCapture';
 import Hostgroups from './pages/Hostgroups';
+import BgpBlackholing from './pages/BgpBlackholing';
 import TrafficCollection from './pages/TrafficCollection';
 import AnomalyDetection from './pages/AnomalyDetection';
 import EntropyAnalysis from './pages/EntropyAnalysis';
@@ -77,6 +79,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/bgp-blackholing"
+            element={
+              <PrivateRoute>
+                <BgpBlackholing />
               </PrivateRoute>
             }
           />

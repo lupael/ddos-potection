@@ -188,9 +188,17 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 - [x] **[Capacity] Monthly capacity projections**
   - `backend/services/capacity_planner.py`; `GET /api/v1/bi/capacity-forecast`.
 
----
+- [x] **[Frontend] Enterprise UI overhaul — styles, colours, widgets, all pages**
+  - `frontend/src/styles/App.css` — complete design-system rewrite (40+ CSS tokens, dark navy palette, enterprise cards, buttons, badges, forms, tables, login, stats, empty states)
+  - `frontend/src/styles/theme.css` — full token palette with dark-mode support
+  - `frontend/src/components/Navbar.js` — dark sticky navbar, emoji icons, active-link highlight, accessible dropdown, polished logout
+  - `frontend/src/pages/Dashboard.js` — 5 KPI stat cards, colour-coded badges, quick-actions, 6-item system-status panel
+  - `frontend/src/pages/Login.js` — glassmorphism dark login card, gradient branding, inline loading spinner
+  - `frontend/src/App.js` — added `/bgp-blackholing` route; imported `theme.css`
+  - `docs/screenshots/` — 4 UI screenshots (login, dashboard, alerts, traffic)
+  - `README.md` — updated Screenshots section with new images; updated feature list
 
-## ✅ Completed
+
 
 - [x] FastAPI backend, PostgreSQL, Redis, JWT auth
 - [x] React 18 dashboard with Chart.js
