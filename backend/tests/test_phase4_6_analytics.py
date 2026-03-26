@@ -26,7 +26,7 @@ from services.ticketing_service import JIRAClient, ServiceNowClient, ZendeskClie
 class TestServiceNowClient:
     def test_instantiation(self):
         client = ServiceNowClient("myco.service-now.com", "admin", "pass")
-        assert "myco.service-now.com" in client._base_url
+        assert client._base_url == "https://myco.service-now.com"
 
     @pytest.mark.asyncio
     async def test_create_incident_no_aiohttp(self, monkeypatch):
@@ -109,7 +109,7 @@ class TestJIRAClient:
 class TestZendeskClient:
     def test_instantiation(self):
         client = ZendeskClient("myco", "me@x.com", "token")
-        assert "myco.zendesk.com" in client._base_url
+        assert client._base_url == "https://myco.zendesk.com"
 
     @pytest.mark.asyncio
     async def test_create_ticket_no_aiohttp(self, monkeypatch):
@@ -199,7 +199,8 @@ class TestBrandedEmailRenderer:
         html = renderer.render_welcome_email(user, self.BRANDING)
         assert "alice" in html
         assert "TestISP" in html
-        assert "portal.testisp.com" in html
+        # Portal link should appear in the email body as an href
+        assert 'href="https://portal.testisp.com"' in html
 
     def test_render_alert_email_missing_fields(self):
         renderer = BrandedEmailRenderer()

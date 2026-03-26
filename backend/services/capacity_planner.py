@@ -119,7 +119,11 @@ class CapacityPlanner:
 
         Args:
             isp_id: ISP primary key (informational).
-            redis_data: Optional dict of recent traffic metrics from Redis.
+            redis_data: Optional dict of recent traffic metrics from Redis
+                (``{timestamp_key: gbps_value}``).  When omitted or empty the
+                projection will be based on zero data points and callers should
+                populate this from their traffic store (e.g. Redis TSDB keys or
+                a DB query against ``TrafficLog``).
 
         Returns:
             Capacity report dict.
