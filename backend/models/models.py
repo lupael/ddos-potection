@@ -269,3 +269,36 @@ class AttackCampaign(Base):
     status = Column(String(20), default="active")  # active, resolved
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Router(Base):
+    """Physical or virtual router managed by the platform."""
+    __tablename__ = "routers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    vendor = Column(String(50), nullable=False)       # cisco, juniper, nokia, arista, mikrotik
+    ip_address = Column(String(45), nullable=False)
+    port = Column(Integer, default=22)
+    username = Column(String(255), nullable=False)
+    encrypted_password = Column(String(1024), nullable=False)  # stored encrypted at rest
+    role = Column(String(50), default="border")       # border, scrubbing, access
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class Signature(Base):
+    """BPF / FlowSpec attack signature stored in the database."""
+    __tablename__ = "signatures"
+
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    attack_type = Column(String(100), nullable=False, index=True)
+    bpf_filter = Column(Text, nullable=True)
+    flowspec_rule = Column(Text, nullable=True)
+    confidence = Column(Numeric(4, 3), nullable=False, default=0.5)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

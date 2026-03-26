@@ -30,6 +30,17 @@ from routers.audit_router import router as audit_router
 from routers.campaign_router import router as campaign_router
 from routers.forecast_router import router as forecast_router
 from routers.rpki_router import router as rpki_router
+from routers.lstm_router import router as lstm_router
+from routers.cloud_flow_router import router as cloud_flow_router
+from routers.router_inventory_router import router as router_inventory_router
+from routers.scrubbing_router import router as scrubbing_router
+from routers.sla_compliance_router import router as sla_compliance_router
+from routers.ticketing_router import router as ticketing_router
+from routers.branding_router import router as branding_router
+from routers.signature_router import router as signature_router
+from routers.risk_router import router as risk_router
+from routers.bi_router import router as bi_router
+from routers.graphql_router import router as graphql_status_router, graphql_app
 from middleware.audit_middleware import AuditMiddleware
 from database import engine, Base, get_db
 from config import settings
@@ -90,6 +101,19 @@ app.include_router(audit_router)
 app.include_router(campaign_router)
 app.include_router(forecast_router)
 app.include_router(rpki_router)
+app.include_router(lstm_router)
+app.include_router(cloud_flow_router)
+app.include_router(router_inventory_router)
+app.include_router(scrubbing_router)
+app.include_router(sla_compliance_router)
+app.include_router(ticketing_router)
+app.include_router(branding_router)
+app.include_router(signature_router)
+app.include_router(risk_router)
+app.include_router(bi_router)
+app.include_router(graphql_status_router, prefix="/api/v1/graphql", tags=["GraphQL"])
+if graphql_app is not None:
+    app.include_router(graphql_app, prefix="/api/v1/graphql")
 
 @app.get("/")
 async def root():

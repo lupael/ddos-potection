@@ -81,9 +81,9 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 
 ## 🟡 Medium Priority
 
-- [ ] **[Frontend] TypeScript migration for API service layer**
-  - File: `frontend/src/services/api.js` → `api.ts`
-  - Start with service layer to catch API contract mismatches at build time
+- [x] **[Frontend] TypeScript migration for API service layer**
+  - File: `frontend/src/services/api.ts` + `frontend/src/types/api.d.ts`
+  - Full typed API service with `AxiosInstance` and typed generics for all endpoints
 
 - [x] **[Infra] Redis Sentinel in docker-compose.yml**
   - Updated `docker-compose.yml`: `redis-master`, `redis-replica`, `redis-sentinel` services; `docker/redis-sentinel.conf` added.
@@ -118,8 +118,11 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 
 ## 🟢 Low Priority / Nice to Have
 
-- [ ] **[Frontend] Dark mode / theming**
-- [ ] **[API] GraphQL endpoint** alongside REST
+- [x] **[Frontend] Dark mode / theming**
+  - `frontend/src/styles/theme.css` — CSS custom properties; `prefers-color-scheme` + `.dark-mode` class
+  - `frontend/src/hooks/useDarkMode.js` — `[isDarkMode, toggleDarkMode]` hook with localStorage
+- [x] **[API] GraphQL endpoint** alongside REST
+  - `backend/routers/graphql_router.py` — Strawberry schema with `alerts` + `traffic_logs` queries; stub if not installed; mounted at `/api/v1/graphql`
 - [x] **[Reporting] Two-Factor Authentication (TOTP)**
   - `routers/totp_router.py`: setup/verify/disable/validate; `User.totp_secret` + `totp_enabled`
 - [ ] **[Mobile] React Native companion app**
@@ -131,7 +134,29 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
   - `services/forecasting_service.py` with Redis-backed hourly stats; `routers/forecast_router.py`
 - [x] **[DevOps] Helm chart** for Kubernetes deployment
   - Full chart in `kubernetes/helm/ddos-platform/` with HPA, ingress, configmap, secret templates.
-- [ ] **[DevOps] HashiCorp Vault** integration for secrets management
+- [x] **[DevOps] HashiCorp Vault** integration for secrets management
+  - `backend/services/vault_client.py` — `VaultClient` with aiohttp/urllib fallback; `VAULT_ADDR/TOKEN/ROLE` config
+  - `kubernetes/vault-secret-store.yaml` — Kubernetes SecretStore CRD pointing to Vault
+  - `kubernetes/external-secrets.yaml` — ExternalSecret manifests for DB, Redis, app secrets
+- [x] **[Integration] ServiceNow / JIRA / Zendesk ticketing**
+  - `backend/services/ticketing_service.py`; `backend/routers/ticketing_router.py`
+  - Config: `SERVICENOW_*`, `JIRA_*`, `ZENDESK_*` settings.
+- [x] **[Branding] CSS variable injection (per-ISP)**
+  - `backend/routers/branding_router.py` — public CSS endpoint + CRUD + custom domain.
+  - `backend/services/custom_domain.py` — `CustomDomainManager`.
+- [x] **[Branding] Branded email templates**
+  - `backend/services/email_templates.py` — `BrandedEmailRenderer` (alert, report, welcome).
+- [x] **[Security] Botnet C2 fingerprinting**
+  - `backend/services/botnet_c2.py` — Mirai, Emotet, IRC, HTTP beacon indicators.
+- [x] **[Signatures] BPF / FlowSpec signature library**
+  - `backend/services/signature_library.py`; `backend/routers/signature_router.py`.
+  - `Signature` model added to `backend/models/models.py`.
+- [x] **[Risk] Daily attack-probability scoring per prefix**
+  - `backend/services/risk_scorer.py`; `backend/routers/risk_router.py`.
+- [x] **[BI] Business intelligence service (MRR, ROI, attack cost, KPIs)**
+  - `backend/services/business_intelligence.py`; partial of `backend/routers/bi_router.py`.
+- [x] **[Capacity] Monthly capacity projections**
+  - `backend/services/capacity_planner.py`; `GET /api/v1/bi/capacity-forecast`.
 
 ---
 
@@ -195,6 +220,45 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 - [x] SLA tracking (SLARecord model + /api/v1/sla/ router)
 - [x] Audit logging middleware (AuditLog model + AuditMiddleware)
 - [x] Webhook system with HMAC-SHA256 signatures (/api/v1/webhooks/ router)
+- [x] Shadow Mode for ML detectors (SHADOW_MODE config flag; create_ml_alert wrapper)
+- [x] Threat Score service (ThreatScorer; get_threat_score with Redis bad-actor feed check)
+- [x] LSTM Attack Predictor (GradientBoostingClassifier approximation; lstm_router)
+- [x] GRE Decapsulation service (RFC 2784 + RFC 2890; GREDecapsulator)
+- [x] AWS VPC Flow Log ingestion (AWSVPCFlowParser; cloud_flow_router)
+- [x] GCP VPC Flow Log ingestion (GCPFlowParser; cloud_flow_router)
+- [x] TLS-wrapped NetFlow receiver (TLSFlowReceiver; asyncio + ssl; config flags)
+- [x] Phase 2 test suite (31 unit tests in test_phase2_detection.py)
+- [x] Nokia SROS router driver (NokiaSROSDriver; netmiko nokia_sros; push_acl, withdraw_acl)
+- [x] Router Inventory model + API (Router model; /api/v1/routers/ CRUD + test-connection)
+- [x] Scrubbing Centre diversion (ScrubbingCentre + ScrubbingCentreManager; BGP /32 anycast)
+- [x] Scrubbing Centre API (/api/v1/scrubbing/ divert + return + centres)
+- [x] Third-party scrubbing providers (CloudflareProvider, LumenProvider, NSFOCUSProvider)
+- [x] Cooldown de-mitigation (CooldownManager; Redis-backed with in-process fallback)
+- [x] Intelligent mitigation selection (MitigationSelector; ATTACK_TYPE_MATRIX; AutoEscalationManager)
+- [x] Tier-based SLA targets (SLA_TIERS; SLAComplianceChecker; monthly report + breach credits)
+- [x] SLA Compliance API (/api/v1/sla/compliance/ tiers + monthly)
+- [x] Phase 3 test suite (63 unit tests in test_phase3_mitigation.py)
+- [x] ServiceNow / JIRA / Zendesk ticketing (services/ticketing_service.py + ticketing_router.py)
+- [x] CSS variable injection (branding_router.py; public /css endpoint per-ISP)
+- [x] Branded email templates (services/email_templates.py; alert, report, welcome)
+- [x] Custom domain / CNAME support (services/custom_domain.py; /domain endpoints)
+- [x] Botnet C2 fingerprinting (services/botnet_c2.py; Mirai/Emotet/IRC/HTTP indicators)
+- [x] BPF / FlowSpec signature library (services/signature_library.py; signature_router.py)
+- [x] Daily attack-probability risk scoring (services/risk_scorer.py; risk_router.py)
+- [x] Business Intelligence dashboard (services/business_intelligence.py; bi_router.py)
+- [x] Monthly capacity projections (services/capacity_planner.py; /bi/capacity-forecast)
+- [x] Phase 4–6 test suite (47 unit tests in test_phase4_6_analytics.py)
+- [x] TypeScript API service layer (frontend/src/services/api.ts + types/api.d.ts)
+- [x] Dark mode theming (frontend/src/styles/theme.css + hooks/useDarkMode.js)
+- [x] GraphQL endpoint (routers/graphql_router.py; strawberry schema with fallback stub)
+- [x] Kubernetes Pod Disruption Budgets (kubernetes/pdb.yaml)
+- [x] Kubernetes External Secrets (kubernetes/external-secrets.yaml + vault-secret-store.yaml)
+- [x] HashiCorp Vault client (services/vault_client.py; VAULT_ADDR/TOKEN/ROLE config)
+- [x] XDP/eBPF filter skeleton (backend/xdp/xdp_ddos_filter.c + xdp_loader.py)
+- [x] TimescaleDB configuration helper (services/timescale_config.py + docker-compose.timescale.yml)
+- [x] PostgreSQL PITR backup script (scripts/pg_backup.sh; base backup + WAL archive to S3)
+- [x] Disaster recovery runbook (project-docs/DISASTER_RECOVERY.md; RTO 4h / RPO 15min)
+- [x] HMAC-MD5 flow auth + DTLS config flags (FLOW_HMAC_ENABLED, DTLS_FLOW_ENABLED in config.py)
 
 ---
 

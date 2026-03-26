@@ -1,7 +1,9 @@
 """
 Multi-vendor router driver implementations for ACL/filter push.
-Supports: Cisco IOS/IOS-XR (Netmiko), Juniper JunOS (NAPALM), Arista EOS (eAPI)
+Supports: Cisco IOS/IOS-XR (Netmiko), Juniper JunOS (NAPALM), Arista EOS (eAPI),
+          Nokia SROS (Netmiko)
 """
+import ipaddress
 import logging
 from dataclasses import dataclass, field
 from typing import List, Dict
@@ -189,6 +191,157 @@ class AristaEOSDriver:
             return False
 
 
+class NokiaSROSDriver:
+    """Push CPM (Control Plane Management) filter entries to Nokia SROS devices via Netmiko."""
+
+    def __init__(self, host: str, port: int, username: str, password: str) -> None:
+        """Initialise the Nokia SROS driver.
+
+        Args:
+            host: Router hostname or IP address.
+            port: SSH port (typically 22).
+            username: Login username.
+            password: Login password.
+        """
+        ipaddress.ip_address(host)  # raises ValueError for invalid host IP
+        self._host = host
+        self._port = port
+        self._username = username
+        self._password = password
+        self._connection = None
+
+    def connect(self) -> bool:
+        """Establish an SSH connection to the Nokia SROS device.
+
+        Returns:
+            True if the connection was established successfully, False otherwise.
+        """
+        if not _NETMIKO_AVAILABLE:
+            logger.error("netmiko not installed; NokiaSROSDriver unavailable")
+            return False
+        try:
+            self._connection = ConnectHandler(
+                device_type="nokia_sros",
+                host=self._host,
+                username=self._username,
+                password=self._password,
+                port=self._port,
+            )
+            logger.info("Connected to Nokia SROS device %s", self._host)
+            return True
+        except Exception as exc:
+            logger.error("Failed to connect to Nokia SROS %s: %s", self._host, exc)
+            self._connection = None
+            return False
+
+    def push_acl(self, prefix: str, action: str = "drop") -> bool:
+        """Push a CPM filter entry for the given prefix via Nokia MD-CLI.
+
+        Args:
+            prefix: The IP prefix to filter (e.g., "192.0.2.1/32").
+            action: Filter action, either "drop" or "accept". Defaults to "drop".
+
+        Returns:
+            True if the entry was pushed successfully, False otherwise.
+        """
+        try:
+            ipaddress.ip_network(prefix, strict=False)
+        except ValueError:
+            logger.error("NokiaSROSDriver.push_acl: invalid prefix %r", prefix)
+            return False
+
+        if action not in ("drop", "accept"):
+            logger.error("NokiaSROSDriver.push_acl: invalid action %r", action)
+            return False
+
+        if not _NETMIKO_AVAILABLE:
+            logger.error("netmiko not installed; NokiaSROSDriver unavailable")
+            return False
+
+        if self._connection is None:
+            if not self.connect():
+                return False
+
+        # Nokia MD-CLI CPM filter configuration commands
+        entry_name = prefix.replace("/", "_").replace(".", "_").replace(":", "_")
+        commands = [
+            "/configure",
+            "system security cpm-filter ip-filter",
+            f"entry {entry_name}",
+            f"match src-ip {prefix}",
+            f"action {action}",
+            "exit all",
+            "commit",
+        ]
+        try:
+            self._connection.send_config_set(commands)
+            logger.info("Pushed Nokia SROS CPM filter entry for %s (%s) on %s", prefix, action, self._host)
+            return True
+        except Exception as exc:
+            logger.error("Failed to push Nokia SROS CPM filter on %s: %s", self._host, exc)
+            return False
+
+    def withdraw_acl(self, prefix: str) -> bool:
+        """Remove a CPM filter entry for the given prefix.
+
+        Args:
+            prefix: The IP prefix whose filter entry should be removed.
+
+        Returns:
+            True if the entry was removed successfully, False otherwise.
+        """
+        try:
+            ipaddress.ip_network(prefix, strict=False)
+        except ValueError:
+            logger.error("NokiaSROSDriver.withdraw_acl: invalid prefix %r", prefix)
+            return False
+
+        if not _NETMIKO_AVAILABLE:
+            logger.error("netmiko not installed; NokiaSROSDriver unavailable")
+            return False
+
+        if self._connection is None:
+            if not self.connect():
+                return False
+
+        entry_name = prefix.replace("/", "_").replace(".", "_").replace(":", "_")
+        commands = [
+            "/configure",
+            "system security cpm-filter ip-filter",
+            f"no entry {entry_name}",
+            "exit all",
+            "commit",
+        ]
+        try:
+            self._connection.send_config_set(commands)
+            logger.info("Withdrew Nokia SROS CPM filter entry for %s on %s", prefix, self._host)
+            return True
+        except Exception as exc:
+            logger.error("Failed to withdraw Nokia SROS CPM filter on %s: %s", self._host, exc)
+            return False
+
+    def get_status(self) -> dict:
+        """Return connection and platform information for this device.
+
+        Returns:
+            Dictionary with keys: connected, host, port, platform_info.
+        """
+        connected = self._connection is not None
+        platform_info: dict = {}
+        if connected and _NETMIKO_AVAILABLE:
+            try:
+                output = self._connection.send_command("show version")
+                platform_info["version_output"] = output[:500] if output else ""
+            except Exception as exc:
+                logger.warning("Nokia SROS get_status: could not fetch version from %s: %s", self._host, exc)
+        return {
+            "connected": connected,
+            "host": self._host,
+            "port": self._port,
+            "platform_info": platform_info,
+        }
+
+
 class RouterACLService:
     """Factory that returns the correct driver for a given vendor string."""
 
@@ -200,6 +353,8 @@ class RouterACLService:
         "junos": JuniperDriver,
         "arista": AristaEOSDriver,
         "arista_eos": AristaEOSDriver,
+        "nokia": NokiaSROSDriver,
+        "nokia_sros": NokiaSROSDriver,
     }
 
     def get_driver(self, vendor: str):

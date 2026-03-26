@@ -1,0 +1,47 @@
+/* DDoS Protection Platform — theme variables */
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent: #1a73e8;
+  --border: #dddddd;
+  --danger: #d93025;
+  --success: #1e8e3e;
+  --warning: #f9ab00;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --text-primary: #e0e0e0;
+    --text-secondary: #aaaaaa;
+    --accent: #4a9ef8;
+    --border: #444444;
+    --danger: #f28b82;
+    --success: #81c995;
+    --warning: #fdd663;
+  }
+}
+
+/* Manual dark mode class for toggle support */
+.dark-mode {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --text-primary: #e0e0e0;
+  --text-secondary: #aaaaaa;
+  --accent: #4a9ef8;
+  --border: #444444;
+  --danger: #f28b82;
+  --success: #81c995;
+  --warning: #fdd663;
+}
+
+/* Utility classes */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}

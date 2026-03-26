@@ -1,0 +1,24 @@
+# Docker Compose override: replace the default PostgreSQL service with TimescaleDB.
+# Apply with: docker-compose -f docker-compose.yml -f docker/timescaledb/docker-compose.timescale.yml up -d
+version: "3.9"
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_DB: ddos_platform
+      POSTGRES_USER: ddos_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ddos_pass}
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ddos_user -d ddos_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  timescale_data:

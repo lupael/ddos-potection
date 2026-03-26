@@ -9,6 +9,182 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Phase 7 / DevOps / Infrastructure Features
+- **PostgreSQL PITR Backup Script** (`scripts/pg_backup.sh`):
+  `--full` (pg_basebackup → S3/MinIO) and `--wal-archive` modes. Configurable via
+  `PGHOST`, `PGPORT`, `PGUSER`, `BACKUP_BUCKET`, `BACKUP_PREFIX`, `S3_ENDPOINT_URL`.
+  Uses `set -euo pipefail`; no shell injection.
+- **TimescaleDB Docker Compose Override** (`docker/timescaledb/docker-compose.timescale.yml`):
+  Replaces default `postgres` service with `timescale/timescaledb:latest-pg15`.
+- **TimescaleDB Config Helper** (`backend/services/timescale_config.py`):
+  `TimescaleDBSetup` with `setup_hypertable`, `add_retention_policy`,
+  `add_compression_policy`, `create_continuous_aggregate`. Uses `sqlalchemy.text()` for
+  all raw SQL; no user-input interpolation.
+- **Kubernetes Pod Disruption Budgets** (`kubernetes/pdb.yaml`):
+  `PodDisruptionBudget` for `ddos-backend` (minAvailable: 1) and `ddos-collector`
+  (minAvailable: 2) to ensure zero-downtime rolling updates.
+- **Kubernetes External Secrets** (`kubernetes/external-secrets.yaml`,
+  `kubernetes/vault-secret-store.yaml`):
+  `ExternalSecret` CRDs for DB, Redis, and app secrets sourced from HashiCorp Vault.
+  `SecretStore` pointing to `vault.vault.svc.cluster.local`.
+- **HashiCorp Vault Client** (`backend/services/vault_client.py`):
+  `VaultClient` with `read_secret`, `write_secret`, `read_db_credentials`,
+  `read_app_secrets`. Uses `aiohttp` with sync `urllib.request` fallback.
+  Config: `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_ROLE`.
+- **XDP/eBPF Filter Skeleton** (`backend/xdp/xdp_ddos_filter.c`):
+  XDP BPF program with `blocked_ips` LRU hash map; drops matching source IPs at
+  driver level. `backend/xdp/xdp_loader.py`: `XDPLoader` with interface name
+  validation and subprocess (no `shell=True`).
+- **Disaster Recovery Runbook** (`project-docs/DISASTER_RECOVERY.md`):
+  Full runbook covering PostgreSQL PITR restore, Redis Sentinel failover, full cluster
+  rebuild. RTO: 4h, RPO: 15min.
+- **GraphQL Endpoint** (`backend/routers/graphql_router.py`):
+  Strawberry-backed schema with `alerts` and `traffic_logs` queries; graceful stub at
+  `/api/v1/graphql/status` if strawberry not installed. Mounted in `main.py`.
+- **Config additions** (`backend/config.py`):
+  `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_ROLE`, `FLOW_HMAC_ENABLED`, `FLOW_HMAC_SECRET`,
+  `DTLS_FLOW_ENABLED`, `DTLS_FLOW_PORT`.
+
+#### Frontend Features
+- **TypeScript API Service** (`frontend/src/services/api.ts`, `frontend/src/types/api.d.ts`):
+  Fully typed API client with interfaces for `IAlert`, `ITrafficData`, `IMitigation`,
+  `IISP`, `IUser`, `IRule`, `ISubscription`, `IAttackCampaign`, `ISLARecord`,
+  `IWebhook`, `IThreatScore`. `AxiosInstance` with auth interceptor.
+- **Dark Mode Theming** (`frontend/src/styles/theme.css`, `frontend/src/hooks/useDarkMode.js`):
+  CSS custom properties for light/dark schemes; `prefers-color-scheme` media query plus
+  explicit `.dark-mode` class. `useDarkMode` hook with `localStorage` persistence.
+
+
+
+- **ServiceNow / JIRA / Zendesk Ticketing Integration** (`backend/services/ticketing_service.py`):
+  `ServiceNowClient`, `JIRAClient`, `ZendeskClient` classes. All I/O via `aiohttp`
+  with `try/except ImportError` fallback. Methods: `create_incident`, `update_incident`,
+  `close_incident`; `create_issue`, `update_issue`, `add_comment`; `create_ticket`,
+  `update_ticket`. Failures are logged but never raised.
+- **Ticketing Router** (`backend/routers/ticketing_router.py`):
+  `GET /api/v1/ticketing/config`, `POST /api/v1/ticketing/incident`,
+  `POST /api/v1/ticketing/close`. JWT required (admin/operator).
+- **Config settings** (`backend/config.py`):
+  Added `SERVICENOW_INSTANCE/USERNAME/PASSWORD`, `JIRA_BASE_URL/EMAIL/API_TOKEN/PROJECT_KEY`,
+  `ZENDESK_SUBDOMAIN/EMAIL/API_TOKEN` fields.
+- **CSS Variable Branding Router** (`backend/routers/branding_router.py`):
+  `GET /api/v1/branding/{isp_id}/css` (public, returns `text/css` with `:root` custom
+  properties), `GET /api/v1/branding/{isp_id}` (JWT), `PUT /api/v1/branding/{isp_id}`
+  (JWT, admin only), `POST /api/v1/branding/{isp_id}/domain`,
+  `GET /api/v1/branding/{isp_id}/domain/verify`.
+- **Branded Email Templates** (`backend/services/email_templates.py`):
+  `BrandedEmailRenderer` class with `render_alert_email`, `render_monthly_report_email`,
+  `render_welcome_email`. Pure f-string HTML, no third-party template libraries.
+- **Custom Domain Manager** (`backend/services/custom_domain.py`):
+  `CustomDomainManager` class with `validate_domain` (regex, no DNS/shell),
+  `set_domain`, `verify_cname` (stub), `get_domain_config`.
+- **Signature Library** (`backend/services/signature_library.py`):
+  `AttackSignature` dataclass and `SignatureLibrary` class. Methods:
+  `extract_bpf_from_alert`, `extract_flowspec_from_alert`, `add_signature`,
+  `search_signatures`, `export_signatures` (json/bpf/flowspec).
+- **Signature Router** (`backend/routers/signature_router.py`):
+  `GET /api/v1/signatures`, `POST /api/v1/signatures/extract`,
+  `GET /api/v1/signatures/{id}/bpf`, `GET /api/v1/signatures/{id}/flowspec`.
+- **Signature DB Model** (`backend/models/models.py`):
+  New `Signature` SQLAlchemy model (`signatures` table) with `isp_id`, `name`,
+  `attack_type`, `bpf_filter`, `flowspec_rule`, `confidence`, `is_active`.
+- **Botnet C2 Fingerprinter** (`backend/services/botnet_c2.py`):
+  `BotnetC2Fingerprinter` class with built-in C2 indicators (Mirai, Emotet, IRC, HTTP
+  beacon). Methods: `analyze_flow`, `get_c2_report`, `generate_c2_alert`.
+- **Risk Scorer** (`backend/services/risk_scorer.py`):
+  `RiskScorer` class. `calculate_prefix_risk` scores 0–100 from attack frequency,
+  recency, and threat-intel hits. `batch_score_prefixes`, `should_preempt`,
+  `get_preemptive_action`.
+- **Risk Router** (`backend/routers/risk_router.py`):
+  `GET /api/v1/risk/scores`, `GET /api/v1/risk/scores/{prefix}`,
+  `POST /api/v1/risk/preempt`.
+- **Business Intelligence Service** (`backend/services/business_intelligence.py`):
+  `BIService` with `calculate_mrr`, `calculate_attack_cost`, `calculate_roi`,
+  `get_executive_kpis`.
+- **Capacity Planner** (`backend/services/capacity_planner.py`):
+  `CapacityPlanner` with `project_traffic_growth` (linear regression),
+  `estimate_capacity_needs`, `generate_capacity_report`.
+- **BI Router** (`backend/routers/bi_router.py`):
+  `GET /api/v1/bi/mrr`, `GET /api/v1/bi/attack-cost/{alert_id}`, `GET /api/v1/bi/roi`,
+  `GET /api/v1/bi/kpi-dashboard`, `GET /api/v1/bi/capacity-forecast`.
+- **Test suite** (`backend/tests/test_phase4_6_analytics.py`):
+  47 tests covering all new services; all pass.
+
+
+- **Nokia SROS Router Driver** (`backend/services/router_drivers.py`):
+  `NokiaSROSDriver` class with `connect`, `push_acl`, `withdraw_acl`, `get_status`
+  methods. Uses Netmiko `nokia_sros` device type. Validates IPs with `ipaddress`.
+  Registered in `RouterACLService` under keys `nokia` and `nokia_sros`.
+- **Router Inventory Model** (`backend/models/models.py`):
+  New `Router` SQLAlchemy model (`routers` table) with `isp_id`, `name`, `vendor`,
+  `ip_address`, `port`, `username`, `encrypted_password`, `role`, `is_active`.
+- **Router Inventory API** (`backend/routers/router_inventory_router.py`):
+  `GET/POST /api/v1/routers`, `PUT/DELETE /api/v1/routers/{id}`,
+  `POST /api/v1/routers/{id}/test-connection`. All queries filtered by `isp_id`.
+  `encrypted_password` never returned in responses.
+- **Scrubbing Centre Diversion** (`backend/services/scrubbing_centre.py`):
+  `ScrubbingCentre` class with `divert_traffic`, `return_traffic`, `get_utilization`.
+  `ScrubbingCentreManager` with `select_centre` (lowest-utilization anycast),
+  `divert`, and `return_all`. All IPs validated with `ipaddress`.
+- **Scrubbing Centre API** (`backend/routers/scrubbing_router.py`):
+  `GET /api/v1/scrubbing/centres`, `POST /api/v1/scrubbing/divert`,
+  `POST /api/v1/scrubbing/return`. JWT auth required (admin/operator).
+- **Third-Party Scrubbing Providers** (`backend/services/scrubbing_providers.py`):
+  `CloudflareProvider`, `LumenProvider`, `NSFOCUSProvider` with `activate_protection`
+  and `deactivate_protection` stub implementations. `ScrubProvider` registry dict.
+- **Cooldown De-mitigation** (`backend/services/mitigation_service.py`):
+  `CooldownManager` class with `start_cooldown`, `is_in_cooldown`, `cancel_cooldown`,
+  `get_remaining_secs`. Redis-backed with in-process dict fallback.
+- **Intelligent Mitigation Selection** (`backend/services/mitigation_selector.py`):
+  `MitigationSelector` with `ATTACK_TYPE_MATRIX` covering syn_flood, udp_flood,
+  dns_amplification, ntp_amplification, memcached, http_flood, and default.
+  `AutoEscalationManager` with Redis-backed attempt tracking and timeout-based escalation.
+- **Tier-Based SLA Targets** (`backend/services/sla_service.py`):
+  `SLA_TIERS` dict for standard/pro/enterprise. `SLAComplianceChecker` with
+  `check_ttd`, `check_ttm`, `calculate_breach_credit`, `generate_monthly_report`.
+- **SLA Compliance API** (`backend/routers/sla_compliance_router.py`):
+  `GET /api/v1/sla/compliance/tiers`, `GET /api/v1/sla/compliance/monthly`.
+  JWT auth required.
+- **Config additions** (`backend/config.py`):
+  `MITIGATION_COOLDOWN_SECS`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+  `SCRUBBING_ENABLED`, `SCRUBBING_CENTRES`.
+- **Phase 3 tests** (`backend/tests/test_phase3_mitigation.py`):
+  63 unit tests covering all new services and classes.
+
+#### Phase 2 Detection Features
+- **Shadow Mode for ML detectors** (`backend/config.py`, `backend/services/anomaly_detector.py`):
+  New `SHADOW_MODE: bool = False` config flag. When enabled, ML-based detectors
+  (`detect_entropy_anomaly` via new `create_ml_alert` wrapper) tag alerts with
+  `{"shadow": true}` in Redis payloads and skip mitigation/notifications/PCAP capture.
+- **Threat Score service** (`backend/services/threat_score.py`):
+  `ThreatScorer.calculate_score(alert_data)` computes a 0–100 integer score from
+  bad-actor feed hit (+40), RPKI invalid (+20), geo-blocked region (+20), and
+  ML confidence ≥ 0.7 (+20). `get_threat_score(alert_data, redis_client)` adds a
+  `SISMEMBER` check against the `threat_intel:bad_actors` Redis SET.
+- **LSTM Attack Predictor** (`backend/services/lstm_predictor.py`):
+  `LSTMPredictor` class backed by `GradientBoostingClassifier` (sklearn).
+  `prepare_features`, `train`, `predict`, `save_model`, `load_model` methods.
+  Graceful stub fallback when sklearn is not installed.
+- **LSTM Router** (`backend/routers/lstm_router.py`):
+  `GET /api/v1/ml/lstm/status`, `POST /api/v1/ml/lstm/predict`. JWT required.
+- **GRE Decapsulation service** (`backend/services/gre_decap.py`):
+  `GREDecapsulator` supports RFC 2784 (standard) and RFC 2890 (key/sequence).
+  Methods: `is_gre_packet`, `parse_gre_header`, `decapsulate`.
+- **Cloud VPC Flow Ingestion** (`backend/services/cloud_flow_ingestion.py`):
+  `AWSVPCFlowParser.parse_line` / `parse_file` for AWS VPC Flow Log v2 text format.
+  `GCPFlowParser.parse_record` for GCP VPC Flow Log JSON records.
+- **Cloud Flow Router** (`backend/routers/cloud_flow_router.py`):
+  `POST /api/v1/cloud-flows/aws/upload` (multipart file),
+  `POST /api/v1/cloud-flows/gcp/upload` (JSON body). JWT required. ISP-scoped.
+- **TLS Flow Receiver** (`backend/services/tls_flow_receiver.py`):
+  `TLSFlowReceiver` asyncio TLS TCP server for encrypted NetFlow/IPFIX streams.
+  `create_ssl_context` supports optional mutual TLS (cafile). New config keys:
+  `TLS_FLOW_ENABLED`, `TLS_FLOW_PORT`, `TLS_FLOW_CERTFILE`, `TLS_FLOW_KEYFILE`.
+- **Phase 2 tests** (`backend/tests/test_phase2_detection.py`):
+  31 unit tests covering all new services and shadow-mode behaviour.
+
+
+
 #### Tasks 1–10: Foundation, Detection, ML Baselines
 - **Task 1 — Alembic Migrations**: `backend/alembic.ini`, `backend/alembic/env.py`,
   `backend/alembic/script.py.mako`, `backend/alembic/versions/001_initial_schema.py`.

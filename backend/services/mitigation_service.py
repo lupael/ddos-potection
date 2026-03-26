@@ -1,6 +1,7 @@
 """
 Mitigation automation service
 """
+import logging
 import subprocess
 import ipaddress
 import os
@@ -11,6 +12,8 @@ from datetime import datetime, timezone
 from database import SessionLocal
 from models.models import MitigationAction, Alert
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 def validate_prefix(prefix: str) -> bool:
     """Validate that prefix is a valid IPv4 or IPv6 CIDR notation
@@ -933,6 +936,123 @@ def verify_mitigation(
         new_state = "resolved" if resolved else "escalating"
         sm.transition(alert_id, new_state, db)
     return resolved
+
+
+class CooldownManager:
+    """Manages per-mitigation cooldown periods to prevent premature de-mitigation.
+
+    Cooldown state is stored in Redis so it survives process restarts and is
+    shared across multiple worker instances.  When no Redis client is provided
+    an in-process dictionary is used as a fallback.
+    """
+
+    _KEY_PREFIX = "cooldown:"
+
+    def __init__(self, redis_client=None, default_cooldown_secs: int = 300) -> None:
+        """Initialise the cooldown manager.
+
+        Args:
+            redis_client: An initialised Redis client instance.  If None, an
+                in-process dict fallback is used (not suitable for production).
+            default_cooldown_secs: Default cooldown duration in seconds (default 300).
+        """
+        self._redis = redis_client
+        self.default_cooldown_secs = default_cooldown_secs
+        self._local: dict = {}  # fallback store when Redis is unavailable
+
+    def _key(self, mitigation_id: str) -> str:
+        return f"{self._KEY_PREFIX}{mitigation_id}"
+
+    def start_cooldown(self, mitigation_id: str, duration_secs: int = None) -> bool:
+        """Begin a cooldown period for the given mitigation.
+
+        Args:
+            mitigation_id: Unique identifier for the mitigation (e.g., alert ID).
+            duration_secs: Duration in seconds; falls back to default_cooldown_secs.
+
+        Returns:
+            True if the cooldown was started successfully.
+        """
+        import time
+        secs = duration_secs if duration_secs is not None else self.default_cooldown_secs
+        end_time = time.time() + secs
+        key = self._key(mitigation_id)
+        if self._redis is not None:
+            try:
+                self._redis.setex(key, secs, str(end_time))
+                return True
+            except Exception as exc:
+                logger.error("CooldownManager Redis error: %s", exc)
+        # Fallback
+        self._local[key] = end_time
+        return True
+
+    def is_in_cooldown(self, mitigation_id: str) -> bool:
+        """Check whether the mitigation is currently in its cooldown period.
+
+        Args:
+            mitigation_id: Unique identifier for the mitigation.
+
+        Returns:
+            True if the cooldown is still active, False otherwise.
+        """
+        import time
+        key = self._key(mitigation_id)
+        if self._redis is not None:
+            try:
+                val = self._redis.get(key)
+                if val is None:
+                    return False
+                return time.time() < float(val)
+            except Exception as exc:
+                logger.error("CooldownManager Redis error: %s", exc)
+        # Fallback
+        end_time = self._local.get(key)
+        if end_time is None:
+            return False
+        return time.time() < end_time
+
+    def cancel_cooldown(self, mitigation_id: str) -> bool:
+        """Cancel an active cooldown period.
+
+        Args:
+            mitigation_id: Unique identifier for the mitigation.
+
+        Returns:
+            True if the cooldown was cancelled (or did not exist).
+        """
+        key = self._key(mitigation_id)
+        if self._redis is not None:
+            try:
+                self._redis.delete(key)
+                return True
+            except Exception as exc:
+                logger.error("CooldownManager Redis error: %s", exc)
+        self._local.pop(key, None)
+        return True
+
+    def get_remaining_secs(self, mitigation_id: str) -> int:
+        """Return the number of seconds remaining in the cooldown period.
+
+        Args:
+            mitigation_id: Unique identifier for the mitigation.
+
+        Returns:
+            Remaining seconds, or 0 if no cooldown is active.
+        """
+        import time
+        key = self._key(mitigation_id)
+        if self._redis is not None:
+            try:
+                ttl = self._redis.ttl(key)
+                return max(0, int(ttl)) if ttl and ttl > 0 else 0
+            except Exception as exc:
+                logger.error("CooldownManager Redis error: %s", exc)
+        end_time = self._local.get(key)
+        if end_time is None:
+            return 0
+        remaining = end_time - time.time()
+        return max(0, int(remaining))
 
 
 def main():

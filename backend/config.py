@@ -122,6 +122,7 @@ class Settings(BaseSettings):
     # Mitigation
     AUTO_MITIGATION: bool = True
     MITIGATION_DURATION: int = 300  # seconds
+    MITIGATION_COOLDOWN_SECS: int = 300  # cooldown before de-mitigation
     
     # Alerts
     SMTP_HOST: str = "smtp.gmail.com"
@@ -247,6 +248,52 @@ class Settings(BaseSettings):
     # RPKI Validation
     RPKI_VALIDATION_ENABLED: bool = True
     RPKI_API_URL: str = "https://rpki.cloudflare.com/api/v1/validity"
+
+    # Shadow Mode – ML detectors emit tagged alerts but skip mitigation
+    SHADOW_MODE: bool = False
+
+    # Cloudflare Magic Transit
+    CLOUDFLARE_API_TOKEN: str = ""
+    CLOUDFLARE_ACCOUNT_ID: str = ""
+
+    # Scrubbing Centre
+    SCRUBBING_ENABLED: bool = False
+    SCRUBBING_CENTRES: str = ""  # JSON array of centre config objects
+
+    # TLS-wrapped NetFlow receiver
+    TLS_FLOW_ENABLED: bool = False
+    TLS_FLOW_PORT: int = 2056
+    TLS_FLOW_CERTFILE: Optional[str] = None
+    TLS_FLOW_KEYFILE: Optional[str] = None
+
+    # ServiceNow Integration
+    SERVICENOW_INSTANCE: str = ""
+    SERVICENOW_USERNAME: str = ""
+    SERVICENOW_PASSWORD: str = ""
+
+    # JIRA Integration
+    JIRA_BASE_URL: str = ""
+    JIRA_EMAIL: str = ""
+    JIRA_API_TOKEN: str = ""
+    JIRA_PROJECT_KEY: str = "DDOS"
+
+    # Zendesk Integration
+    ZENDESK_SUBDOMAIN: str = ""
+    ZENDESK_EMAIL: str = ""
+    ZENDESK_API_TOKEN: str = ""
+
+    # HashiCorp Vault
+    VAULT_ADDR: str = ""
+    VAULT_TOKEN: str = ""
+    VAULT_ROLE: str = ""
+
+    # HMAC-MD5 Flow Authentication
+    FLOW_HMAC_ENABLED: bool = False
+    FLOW_HMAC_SECRET: str = ""
+
+    # DTLS Flow Receiver
+    DTLS_FLOW_ENABLED: bool = False
+    DTLS_FLOW_PORT: int = 2057
 
     # ---------------------------------------------------------------------------
     # Sub-model instances – populated after all flat fields are validated.

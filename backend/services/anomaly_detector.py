@@ -185,7 +185,7 @@ class AnomalyDetector:
                 top_attacker = Counter(source_ips).most_common(1)[0][0] if source_ips else 'unknown'
                 top_target = Counter(dest_ips).most_common(1)[0][0] if dest_ips else 'unknown'
                 
-                self.create_alert(
+                self.create_ml_alert(
                     isp_id=isp_id,
                     alert_type='distributed_ddos',
                     severity='critical',
@@ -199,7 +199,7 @@ class AnomalyDetector:
             elif src_entropy > 5.0 and dst_entropy < 2.0:
                 top_target = Counter(dest_ips).most_common(1)[0][0] if dest_ips else 'unknown'
                 
-                self.create_alert(
+                self.create_ml_alert(
                     isp_id=isp_id,
                     alert_type='volumetric_attack',
                     severity='high',
@@ -539,8 +539,38 @@ class AnomalyDetector:
             return False
 
 
+    def create_ml_alert(
+        self,
+        isp_id: int,
+        alert_type: str,
+        severity: str,
+        target_ip: str,
+        description: str,
+        source_ip: str = "unknown",
+        ml_confidence: float = 0.0,
+    ) -> None:
+        """Create an alert from an ML/baseline detector.
+
+        When ``settings.SHADOW_MODE`` is enabled the alert is tagged with
+        ``shadow=True`` and mitigation is suppressed.  The shadow flag is
+        stored both in the DB ``description`` prefix and in the Redis payload
+        so downstream consumers can filter accordingly.
+        """
+        shadow = settings.SHADOW_MODE
+        shadow_prefix = "[SHADOW] " if shadow else ""
+        self.create_alert(
+            isp_id=isp_id,
+            alert_type=alert_type,
+            severity=severity,
+            target_ip=target_ip,
+            description=f"{shadow_prefix}{description}",
+            source_ip=source_ip,
+            shadow=shadow,
+        )
+
     def create_alert(self, isp_id: int, alert_type: str, severity: str,
-                     target_ip: str, description: str, source_ip: str = 'unknown'):
+                     target_ip: str, description: str, source_ip: str = 'unknown',
+                     shadow: bool = False):
         """Create an alert in the database and publish to Redis"""
         db = SessionLocal()
         try:
@@ -581,7 +611,8 @@ class AnomalyDetector:
                 'source_ip': source_ip,
                 'description': description,
                 'timestamp': datetime.now(timezone.utc).isoformat(),
-                'isp_id': isp_id  # Include ISP ID for tenant isolation
+                'isp_id': isp_id,  # Include ISP ID for tenant isolation
+                'shadow': shadow,  # Shadow mode flag – True means no mitigation
             }
             self.redis_client.setex(
                 alert_key,
@@ -599,8 +630,8 @@ class AnomalyDetector:
             
             print(f"Alert created: {alert_type} [{severity}] - {description}")
             
-            # Capture attack fingerprint in PCAP format if enabled
-            if self.packet_capture and getattr(settings, 'PCAP_ENABLED', True):
+            # Capture attack fingerprint in PCAP format if enabled (skip in shadow mode)
+            if not shadow and self.packet_capture and getattr(settings, 'PCAP_ENABLED', True):
                 if target_ip and alert_type in ['syn_flood', 'udp_flood', 'icmp_flood']:
                     try:
                         print(f"Capturing attack fingerprint for {alert_type} on {target_ip}")
@@ -613,23 +644,24 @@ class AnomalyDetector:
                     except Exception as e:
                         print(f"Error capturing attack fingerprint: {e}")
             
-            # Send notifications asynchronously
+            # Send notifications asynchronously (skip mitigation-grade notifs in shadow mode)
             # If an event loop is running, schedule the task; otherwise run it in a
             # temporary event loop so notifications are not silently skipped.
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                # No running loop in this thread: run the coroutine to completion.
+            if not shadow:
                 try:
-                    asyncio.run(self._send_alert_notifications(alert_data))
-                except Exception as e:
-                    print(f"Error sending alert notifications (asyncio.run): {e}")
-            else:
-                # Event loop is running: schedule fire-and-forget task.
-                try:
-                    loop.create_task(self._send_alert_notifications(alert_data))
-                except Exception as e:
-                    print(f"Error scheduling alert notifications: {e}")
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    # No running loop in this thread: run the coroutine to completion.
+                    try:
+                        asyncio.run(self._send_alert_notifications(alert_data))
+                    except Exception as e:
+                        print(f"Error sending alert notifications (asyncio.run): {e}")
+                else:
+                    # Event loop is running: schedule fire-and-forget task.
+                    try:
+                        loop.create_task(self._send_alert_notifications(alert_data))
+                    except Exception as e:
+                        print(f"Error scheduling alert notifications: {e}")
             
         except Exception as e:
             print(f"Error creating alert: {e}")
