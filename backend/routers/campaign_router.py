@@ -11,8 +11,11 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.models import AttackCampaign, User
 from routers.auth_router import get_current_user
+from services.campaign_tracker import CampaignTracker
 
 router = APIRouter(prefix="/api/v1/campaigns", tags=["Attack Campaigns"])
+
+_tracker = CampaignTracker()
 
 
 class CampaignOut(BaseModel):
@@ -38,6 +41,29 @@ class CampaignOut(BaseModel):
 class CampaignUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = None  # active, resolved
+
+
+@router.get("/correlations/cross-isp")
+async def get_cross_isp_correlations(
+    window_hours: int = Query(1, ge=1, le=24, description="Look-back window in hours"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Detect coordinated botnet campaigns spanning multiple ISP tenants.
+
+    Returns groups of campaigns sharing the same source ASN across ≥2 different
+    ISPs within the requested time window.  Admin-only endpoint.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+
+    correlations = await _tracker.cross_isp_correlate(db=db, window_hours=window_hours)
+    return {
+        "window_hours": window_hours,
+        "correlation_groups": len(correlations),
+        "correlations": correlations,
+    }
 
 
 @router.get("/", response_model=List[CampaignOut])

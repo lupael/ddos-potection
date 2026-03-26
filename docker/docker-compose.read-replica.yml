@@ -1,0 +1,66 @@
+# Docker Compose override — PostgreSQL Read Replica
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker/docker-compose.read-replica.yml up -d
+#
+# What this does:
+#   - Adds a `postgres-replica` service using `bitnami/postgresql` streaming replication
+#   - The primary `postgres` service is configured as the replication source
+#   - The replica is read-only; application code should route SELECT queries there
+#     via the `DATABASE_REPLICA_URL` environment variable
+#
+# Environment variables (add to your .env file):
+#   POSTGRES_REPLICA_USER=replicator
+#   POSTGRES_REPLICA_PASSWORD=<strong-password>
+#   POSTGRES_REPLICATION_SLOT=replica_slot_1
+
+services:
+
+  # ─── Primary: enable replication ───────────────────────────────────────────
+  postgres:
+    environment:
+      POSTGRES_REPLICATION_MODE: "master"
+      POSTGRES_REPLICATION_USER: "${POSTGRES_REPLICA_USER:-replicator}"
+      POSTGRES_REPLICATION_PASSWORD: "${POSTGRES_REPLICA_PASSWORD:-replicapassword}"
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_wal_senders=5
+      -c wal_keep_size=64MB
+      -c hot_standby=on
+      -c synchronous_commit=local
+
+  # ─── Replica: streaming standby ────────────────────────────────────────────
+  postgres-replica:
+    image: bitnami/postgresql:15
+    restart: unless-stopped
+    environment:
+      POSTGRESQL_REPLICATION_MODE: slave
+      POSTGRESQL_MASTER_HOST: postgres
+      POSTGRESQL_MASTER_PORT_NUMBER: "5432"
+      POSTGRESQL_REPLICATION_USER: "${POSTGRES_REPLICA_USER:-replicator}"
+      POSTGRESQL_REPLICATION_PASSWORD: "${POSTGRES_REPLICA_PASSWORD:-replicapassword}"
+      POSTGRESQL_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+      # Make this instance read-only
+      POSTGRESQL_EXTRA_FLAGS: "-c default_transaction_read_only=on"
+    ports:
+      - "5433:5432"
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ddos-network
+
+  # ─── Backend: add replica URL ──────────────────────────────────────────────
+  backend:
+    environment:
+      # Applications can use this for read-heavy reporting queries
+      DATABASE_REPLICA_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-replica:5432/${POSTGRES_DB:-ddos_protection}"
+
+networks:
+  ddos-network:
+    external: true

@@ -13,6 +13,10 @@ import Hostgroups from './pages/Hostgroups';
 import TrafficCollection from './pages/TrafficCollection';
 import AnomalyDetection from './pages/AnomalyDetection';
 import EntropyAnalysis from './pages/EntropyAnalysis';
+import MyProtection from './pages/customer/MyProtection';
+import MyAlerts from './pages/customer/MyAlerts';
+import MyReports from './pages/customer/MyReports';
+import MySettings from './pages/customer/MySettings';
 
 function App() {
   const isAuthenticated = () => {
@@ -113,6 +117,39 @@ function App() {
             element={
               <PrivateRoute>
                 <EntropyAnalysis />
+              </PrivateRoute>
+            }
+          />
+          {/* Customer self-service portal */}
+          <Route
+            path="/my-protection"
+            element={
+              <PrivateRoute>
+                <MyProtection />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/my-alerts"
+            element={
+              <PrivateRoute>
+                <MyAlerts />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/my-reports"
+            element={
+              <PrivateRoute>
+                <MyReports />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/my-settings"
+            element={
+              <PrivateRoute>
+                <MySettings />
               </PrivateRoute>
             }
           />

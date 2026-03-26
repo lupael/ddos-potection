@@ -116,7 +116,37 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 
 ---
 
-## 🟢 Low Priority / Nice to Have
+- [x] **[Frontend] Customer self-service portal — frontend pages**
+  - Files: `frontend/src/pages/customer/MyProtection.js`, `MyAlerts.js`, `MyReports.js`, `MySettings.js`
+  - Routes: `/my-protection`, `/my-alerts`, `/my-reports`, `/my-settings` added to `App.js`
+  - MyProtection: protected prefixes + active mitigations (read-only)
+  - MyAlerts: filterable alert feed with severity badges
+  - MyReports: PDF/CSV download + SLA performance table with TTD/TTM averages
+  - MySettings: notification channel toggles, alert threshold, IP whitelist
+
+- [x] **[NMS] Zabbix auto-discovery XML template**
+  - File: `scripts/zabbix_template.xml`
+  - Zabbix 6.0 LTS compatible; health probe items; Prometheus metrics items; SNMP trap items;
+    ISP auto-discovery rule with per-ISP alert-count items; triggers; graphs
+
+- [x] **[Infra] PostgreSQL read-replica docker-compose override**
+  - File: `docker/docker-compose.read-replica.yml`
+  - Bitnami PostgreSQL 15 streaming standby; injects `DATABASE_REPLICA_URL` into backend
+
+- [x] **[Infra] HAProxy UDP load balancer config**
+  - File: `docker/haproxy/haproxy.cfg`
+  - NetFlow/sFlow/IPFIX UDP distribution; `balance source` + consistent hashing;
+    stats UI on TCP/8404; HTTP API pass-through with health check
+
+- [x] **[Analytics] Cross-ISP botnet correlation**
+  - File: `backend/services/campaign_tracker.py` — `CampaignTracker.cross_isp_correlate()`
+  - Router: `GET /api/v1/campaigns/correlations/cross-isp` (admin only)
+
+- [x] **[Mitigation] Pre-emptive mitigation trigger**
+  - File: `backend/services/mitigation_selector.py` — `MitigationSelector.trigger_preemptive()`
+  - Applies lightest action when prefix risk score ≥ `PREEMPTIVE_RISK_THRESHOLD` (default 70)
+
+
 
 - [x] **[Frontend] Dark mode / theming**
   - `frontend/src/styles/theme.css` — CSS custom properties; `prefers-color-scheme` + `.dark-mode` class

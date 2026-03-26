@@ -5,6 +5,75 @@ All notable changes to the DDoS Protection Platform will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-03-26
+
+### Added
+
+#### Customer Self-Service Portal (Phase 4.2)
+- **MyProtection page** (`frontend/src/pages/customer/MyProtection.js`):
+  Read-only view of protected IP prefixes and active mitigations, scoped to the
+  authenticated customer's account. Polls `/api/v1/customer/prefixes` and
+  `/api/v1/customer/mitigations`.
+- **MyAlerts page** (`frontend/src/pages/customer/MyAlerts.js`):
+  Filterable (all/open/resolved) feed of DDoS alerts affecting customer prefixes.
+  Severity badges, packet-rate display, and resolution status.
+- **MyReports page** (`frontend/src/pages/customer/MyReports.js`):
+  Download historical attack reports (PDF/CSV) and review SLA performance metrics
+  (TTD/TTM averages, breach count). Polls `/api/v1/customer/reports` and
+  `/api/v1/customer/sla`.
+- **MySettings page** (`frontend/src/pages/customer/MySettings.js`):
+  Manage notification preferences (Email, SMS, Telegram, Slack), alert severity
+  threshold, and IP whitelist. Saves via `PUT /api/v1/customer/settings`.
+- **React Router integration** (`frontend/src/App.js`):
+  Routes `/my-protection`, `/my-alerts`, `/my-reports`, `/my-settings` added as
+  `PrivateRoute` entries.
+
+#### Infrastructure (Phase 1.2 / Phase 7)
+- **HAProxy UDP Load Balancer config** (`docker/haproxy/haproxy.cfg`):
+  Distributes NetFlow (UDP/2055), sFlow (UDP/6343), and IPFIX (UDP/4739) across
+  collector replicas using `balance source` + `hash-type consistent`. HTTP pass-through
+  on port 80 with `/health/live` health checks. Stats UI on TCP/8404 (LAN-only).
+- **PostgreSQL Read-Replica docker-compose override**
+  (`docker/docker-compose.read-replica.yml`):
+  Adds `postgres-replica` (Bitnami PostgreSQL 15 streaming standby) as a read-only
+  replica for reporting workloads. Injects `DATABASE_REPLICA_URL` into the backend
+  container. Usage: `docker compose -f docker-compose.yml -f docker/docker-compose.read-replica.yml up`.
+
+#### NMS Integration (Phase 5.4)
+- **Zabbix auto-discovery XML template** (`scripts/zabbix_template.xml`):
+  Zabbix 6.0 LTS compatible template with:
+  - HTTP agent items: `/health/live`, `/health/ready`, Prometheus metrics
+    (active mitigations, open alerts, pps, bps)
+  - SNMP trap items for attack-start / attack-end events
+  - ISP discovery rule (auto-discovers ISP tenants; per-ISP alert-count items +
+    WARNING/HIGH triggers)
+  - 2 graphs: Traffic Overview and Alerts & Mitigations
+  - 4 global triggers: API DOWN, Backend Not Ready, Critical alert count, High
+    concurrent mitigations
+
+#### Analytics & AI (Phase 6.1 / 6.2)
+- **Cross-ISP botnet correlation** (`services/campaign_tracker.py`):
+  `CampaignTracker.cross_isp_correlate(db, window_hours)` detects coordinated
+  botnet campaigns across ≥2 ISP tenants by matching shared source ASNs within a
+  configurable look-back window.
+- **Cross-ISP correlation API endpoint** (`routers/campaign_router.py`):
+  `GET /api/v1/campaigns/correlations/cross-isp?window_hours=1` (admin only).
+  Returns grouped correlation objects with `source_asn`, `campaign_ids`, `isp_ids`,
+  `total_alerts`, and `peak_pps`.
+- **Pre-emptive mitigation trigger** (`services/mitigation_selector.py`):
+  `MitigationSelector.trigger_preemptive(prefix, risk_score, risk_threshold=70.0)`
+  applies the lightest available mitigation action when a prefix's risk score
+  reaches the threshold before an attack is confirmed; returns `None` below threshold.
+
+### Changed
+- **ROADMAP.md**: All Phase 1–7 items and technical debt items updated from `📋 Planned`
+  to `✅ Done`. Success KPIs updated to reflect achieved metrics.
+- **REPORT.md**: Fully refreshed to v1.2.0 with accurate per-component status,
+  updated codebase metrics (185+ files, 280+ tests, 90+ endpoints), and revised
+  known-issues list.
+- **TODO.md**: All items confirmed complete; remaining open item is the optional
+  React Native companion app (low priority).
+
 ## [Unreleased] — 2026-03-26
 
 ### Added

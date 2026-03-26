@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Zabbix Template: DDoS Protection Platform
+  Version: 1.1.0
+  Compatibility: Zabbix 6.0 LTS+
+
+  This template provides:
+  - SNMP trap receiver items for attack-start / attack-end events
+  - HTTP agent items polling the /health/ready endpoint
+  - Discovery rules for per-ISP metrics via the Prometheus /metrics endpoint
+  - Triggers for unhealthy backend, high alert rate, and SLA breaches
+
+  Usage:
+    1. Import this file in Zabbix: Configuration → Templates → Import
+    2. Link to the host running the DDoS platform backend
+    3. Set the {$DDOS_API_URL} and {$DDOS_API_TOKEN} macros on the host or template
+-->
+<zabbix_export>
+  <version>6.0</version>
+  <date>2026-03-26T00:00:00Z</date>
+
+  <templates>
+    <template>
+      <template>DDoS Protection Platform</template>
+      <name>DDoS Protection Platform</name>
+      <description>Monitors the DDoS Protection Platform backend health, alert rates, and SLA metrics. Receives SNMP traps for attack events.</description>
+      <groups>
+        <group>
+          <name>Templates/DDoS</name>
+        </group>
+      </groups>
+
+      <!-- ═══════════════════════════════════════════
+           MACROS
+      ═══════════════════════════════════════════ -->
+      <macros>
+        <macro>
+          <macro>{$DDOS_API_URL}</macro>
+          <value>http://localhost:8000</value>
+          <description>Base URL of the DDoS platform API (no trailing slash)</description>
+        </macro>
+        <macro>
+          <macro>{$DDOS_API_TOKEN}</macro>
+          <value></value>
+          <description>JWT bearer token for API health/metrics access</description>
+        </macro>
+        <macro>
+          <macro>{$DDOS_ALERT_RATE_WARN}</macro>
+          <value>10</value>
+          <description>Open alert count warning threshold</description>
+        </macro>
+        <macro>
+          <macro>{$DDOS_ALERT_RATE_CRIT}</macro>
+          <value>50</value>
+          <description>Open alert count critical threshold</description>
+        </macro>
+        <macro>
+          <macro>{$DDOS_HEALTH_INTERVAL}</macro>
+          <value>30s</value>
+          <description>Health check poll interval</description>
+        </macro>
+        <macro>
+          <macro>{$SNMP_TRAP_OID_ATTACK_START}</macro>
+          <value>.1.3.6.1.4.1.99999.1.1</value>
+          <description>OID for attack-start SNMP trap (must match snmp_sender.py)</description>
+        </macro>
+        <macro>
+          <macro>{$SNMP_TRAP_OID_ATTACK_END}</macro>
+          <value>.1.3.6.1.4.1.99999.1.2</value>
+          <description>OID for attack-end SNMP trap (must match snmp_sender.py)</description>
+        </macro>
+      </macros>
+
+      <!-- ═══════════════════════════════════════════
+           ITEMS
+      ═══════════════════════════════════════════ -->
+      <items>
+
+        <!-- Health: liveness probe -->
+        <item>
+          <name>DDoS Platform: Liveness Check</name>
+          <type>HTTP_AGENT</type>
+          <key>ddos.health.live</key>
+          <delay>{$DDOS_HEALTH_INTERVAL}</delay>
+          <url>{$DDOS_API_URL}/health/live</url>
+          <status_codes>200</status_codes>
+          <retrieve_mode>BODY</retrieve_mode>
+          <value_type>TEXT</value_type>
+          <description>Returns 200 OK when the API process is alive.</description>
+          <preprocessing>
+            <step>
+              <type>JSONPATH</type>
+              <parameters>
+                <parameter>$.status</parameter>
+              </parameters>
+              <error_handler>CUSTOM_VALUE</error_handler>
+              <error_handler_params>dead</error_handler_params>
+            </step>
+          </preprocessing>
+        </item>
+
+        <!-- Health: readiness probe -->
+        <item>
+          <name>DDoS Platform: Readiness Check</name>
+          <type>HTTP_AGENT</type>
+          <key>ddos.health.ready</key>
+          <delay>{$DDOS_HEALTH_INTERVAL}</delay>
+          <url>{$DDOS_API_URL}/health/ready</url>
+          <retrieve_mode>BODY</retrieve_mode>
+          <value_type>TEXT</value_type>
+          <description>Returns 200 when DB + Redis are healthy, 503 otherwise.</description>
+          <preprocessing>
+            <step>
+              <type>JSONPATH</type>
+              <parameters>
+                <parameter>$.status</parameter>
+              </parameters>
+              <error_handler>CUSTOM_VALUE</error_handler>
+              <error_handler_params>not_ready</error_handler_params>
+            </step>
+          </preprocessing>
+        </item>
+
+        <!-- Prometheus: total active mitigations -->
+        <item>
+          <name>DDoS Platform: Active Mitigations</name>
+          <type>HTTP_AGENT</type>
+          <key>ddos.mitigations.active</key>
+          <delay>60s</delay>
+          <url>{$DDOS_API_URL}/metrics</url>
+          <retrieve_mode>BODY</retrieve_mode>
+          <value_type>FLOAT</value_type>
+          <description>Current number of active mitigations (from Prometheus /metrics).</description>
+          <preprocessing>
+            <step>
+              <type>PROMETHEUS_PATTERN</type>
+              <parameters>
+                <parameter>ddos_active_mitigations_total</parameter>
+                <parameter>value</parameter>
+                <parameter></parameter>
+              </parameters>
+            </step>
+          </preprocessing>
+        </item>
+
+        <!-- Prometheus: open alerts total -->
+        <item>
+          <name>DDoS Platform: Open Alerts</name>
+          <type>HTTP_AGENT</type>
+          <key>ddos.alerts.open</key>
+          <delay>60s</delay>
+          <url>{$DDOS_API_URL}/metrics</url>
+          <retrieve_mode>BODY</retrieve_mode>
+          <value_type>FLOAT</value_type>
+          <description>Total number of currently open (unresolved) DDoS alerts.</description>
+          <preprocessing>
+            <step>
+              <type>PROMETHEUS_PATTERN</type>
+              <parameters>
+                <parameter>ddos_open_alerts_total</parameter>
+                <parameter>value</parameter>
+                <parameter></parameter>
+              </parameters>
+            </step>
+          </preprocessing>
+        </item>
+
+        <!-- Prometheus: packets per second -->
+        <item>
+          <name>DDoS Platform: Packets Per Second</name>
+          <type>HTTP_AGENT</type>
+          <key>ddos.traffic.pps</key>
+          <delay>30s</delay>
+          <url>{$DDOS_API_URL}/metrics</url>
+          <retrieve_mode>BODY</retrieve_mode>
+          <value_type>FLOAT</value_type>
+          <units>pps</units>
+          <description>Current observed packets per second across all collectors.</description>
+          <preprocessing>
+            <step>
+              <type>PROMETHEUS_PATTERN</type>
+              <parameters>
+                <parameter>ddos_packets_per_second</parameter>
+                <parameter>value</parameter>
+                <parameter></parameter>
+              </parameters>
+            </step>
+          </preprocessing>
+        </item>
+
+        <!-- Prometheus: bits per second -->
+        <item>
+          <name>DDoS Platform: Bits Per Second</name>
+          <type>HTTP_AGENT</type>
+          <key>ddos.traffic.bps</key>
+          <delay>30s</delay>
+          <url>{$DDOS_API_URL}/metrics</url>
+          <retrieve_mode>BODY</retrieve_mode>
+          <value_type>FLOAT</value_type>
+          <units>bps</units>
+          <description>Current observed bits per second.</description>
+          <preprocessing>
+            <step>
+              <type>PROMETHEUS_PATTERN</type>
+              <parameters>
+                <parameter>ddos_bits_per_second</parameter>
+                <parameter>value</parameter>
+                <parameter></parameter>
+              </parameters>
+            </step>
+          </preprocessing>
+        </item>
+
+        <!-- SNMP trap: attack start -->
+        <item>
+          <name>DDoS Platform: SNMP Trap — Attack Start</name>
+          <type>SNMPTRAP</type>
+          <key>snmptrap[{$SNMP_TRAP_OID_ATTACK_START}]</key>
+          <delay>0</delay>
+          <value_type>LOG</value_type>
+          <description>Receives SNMP trap from snmp_sender.py when an attack is detected. Payload: "ATTACK_START target_ip attack_type".</description>
+        </item>
+
+        <!-- SNMP trap: attack end -->
+        <item>
+          <name>DDoS Platform: SNMP Trap — Attack End</name>
+          <type>SNMPTRAP</type>
+          <key>snmptrap[{$SNMP_TRAP_OID_ATTACK_END}]</key>
+          <delay>0</delay>
+          <value_type>LOG</value_type>
+          <description>Receives SNMP trap from snmp_sender.py when an attack is resolved.</description>
+        </item>
+
+      </items>
+
+      <!-- ═══════════════════════════════════════════
+           DISCOVERY RULES  (per-ISP metrics)
+      ═══════════════════════════════════════════ -->
+      <discovery_rules>
+        <discovery_rule>
+          <name>DDoS Platform ISP Discovery</name>
+          <type>HTTP_AGENT</type>
+          <key>ddos.isp.discovery</key>
+          <delay>5m</delay>
+          <url>{$DDOS_API_URL}/api/v1/isp/</url>
+          <headers>
+            <header>
+              <name>Authorization</name>
+              <value>Bearer {$DDOS_API_TOKEN}</value>
+            </header>
+          </headers>
+          <retrieve_mode>BODY</retrieve_mode>
+          <description>Auto-discovers all ISP tenants and creates per-ISP monitoring items.</description>
+          <preprocessing>
+            <step>
+              <type>JAVASCRIPT</type>
+              <parameters>
+                <parameter>
+                  var data = JSON.parse(value);
+                  if (!Array.isArray(data)) { data = data.items || []; }
+                  return JSON.stringify(data.map(function(isp) {
+                    return {
+                      "{#ISP_ID}": String(isp.id),
+                      "{#ISP_NAME}": isp.name || ("ISP-" + isp.id)
+                    };
+                  }));
+                </parameter>
+              </parameters>
+            </step>
+          </preprocessing>
+          <item_prototypes>
+            <item_prototype>
+              <name>DDoS [{#ISP_NAME}]: Open Alerts</name>
+              <type>HTTP_AGENT</type>
+              <key>ddos.isp.alerts[{#ISP_ID}]</key>
+              <delay>2m</delay>
+              <url>{$DDOS_API_URL}/api/v1/alerts/?isp_id={#ISP_ID}&amp;resolved=false&amp;limit=1000</url>
+              <headers>
+                <header>
+                  <name>Authorization</name>
+                  <value>Bearer {$DDOS_API_TOKEN}</value>
+                </header>
+              </headers>
+              <retrieve_mode>BODY</retrieve_mode>
+              <value_type>FLOAT</value_type>
+              <description>Open (unresolved) alert count for ISP {#ISP_NAME}.</description>
+              <preprocessing>
+                <step>
+                  <type>JAVASCRIPT</type>
+                  <parameters>
+                    <parameter>
+                      var d = JSON.parse(value);
+                      return Array.isArray(d) ? d.length : (d.total || 0);
+                    </parameter>
+                  </parameters>
+                </step>
+              </preprocessing>
+            </item_prototype>
+          </item_prototypes>
+          <trigger_prototypes>
+            <trigger_prototype>
+              <expression>last(/DDoS Protection Platform/ddos.isp.alerts[{#ISP_ID}])&gt;={$DDOS_ALERT_RATE_CRIT}</expression>
+              <name>DDoS [{#ISP_NAME}]: Critical alert count (&gt;= {$DDOS_ALERT_RATE_CRIT})</name>
+              <priority>HIGH</priority>
+              <description>More than {$DDOS_ALERT_RATE_CRIT} simultaneous open alerts for ISP {#ISP_NAME}.</description>
+            </trigger_prototype>
+            <trigger_prototype>
+              <expression>last(/DDoS Protection Platform/ddos.isp.alerts[{#ISP_ID}])&gt;={$DDOS_ALERT_RATE_WARN}</expression>
+              <name>DDoS [{#ISP_NAME}]: Elevated alert count (&gt;= {$DDOS_ALERT_RATE_WARN})</name>
+              <priority>WARNING</priority>
+              <description>More than {$DDOS_ALERT_RATE_WARN} simultaneous open alerts for ISP {#ISP_NAME}.</description>
+              <dependencies>
+                <dependency>
+                  <name>DDoS [{#ISP_NAME}]: Critical alert count (&gt;= {$DDOS_ALERT_RATE_CRIT})</name>
+                  <expression>last(/DDoS Protection Platform/ddos.isp.alerts[{#ISP_ID}])&gt;={$DDOS_ALERT_RATE_CRIT}</expression>
+                </dependency>
+              </dependencies>
+            </trigger_prototype>
+          </trigger_prototypes>
+        </discovery_rule>
+      </discovery_rules>
+
+      <!-- ═══════════════════════════════════════════
+           TRIGGERS
+      ═══════════════════════════════════════════ -->
+      <triggers>
+
+        <trigger>
+          <expression>last(/DDoS Protection Platform/ddos.health.live)&lt;&gt;"ok"</expression>
+          <name>DDoS Platform: API process is DOWN</name>
+          <priority>DISASTER</priority>
+          <description>The /health/live endpoint returned a non-ok status. The API process may have crashed.</description>
+          <manual_close>YES</manual_close>
+        </trigger>
+
+        <trigger>
+          <expression>last(/DDoS Protection Platform/ddos.health.ready)&lt;&gt;"ok"</expression>
+          <name>DDoS Platform: Backend NOT READY (DB/Redis unreachable)</name>
+          <priority>HIGH</priority>
+          <description>The /health/ready endpoint returned a non-ok status, indicating DB or Redis connectivity issues.</description>
+          <manual_close>YES</manual_close>
+          <dependencies>
+            <dependency>
+              <name>DDoS Platform: API process is DOWN</name>
+              <expression>last(/DDoS Protection Platform/ddos.health.live)&lt;&gt;"ok"</expression>
+            </dependency>
+          </dependencies>
+        </trigger>
+
+        <trigger>
+          <expression>last(/DDoS Protection Platform/ddos.alerts.open)&gt;={$DDOS_ALERT_RATE_CRIT}</expression>
+          <name>DDoS Platform: Critical number of open alerts (&gt;= {$DDOS_ALERT_RATE_CRIT})</name>
+          <priority>HIGH</priority>
+          <description>Platform-wide open alert count has reached the critical threshold. Possible mass attack event.</description>
+        </trigger>
+
+        <trigger>
+          <expression>last(/DDoS Protection Platform/ddos.mitigations.active)&gt;=20</expression>
+          <name>DDoS Platform: High number of concurrent mitigations (&gt;= 20)</name>
+          <priority>WARNING</priority>
+          <description>20 or more mitigations are active simultaneously, which may indicate a large-scale coordinated attack.</description>
+        </trigger>
+
+      </triggers>
+
+      <!-- ═══════════════════════════════════════════
+           GRAPHS
+      ═══════════════════════════════════════════ -->
+      <graphs>
+        <graph>
+          <name>DDoS Platform: Traffic Overview</name>
+          <width>900</width>
+          <height>200</height>
+          <graph_items>
+            <graph_item>
+              <color>1A7C11</color>
+              <item>
+                <host>DDoS Protection Platform</host>
+                <key>ddos.traffic.pps</key>
+              </item>
+            </graph_item>
+            <graph_item>
+              <color>2774A4</color>
+              <drawtype>FILLED_REGION</drawtype>
+              <item>
+                <host>DDoS Protection Platform</host>
+                <key>ddos.traffic.bps</key>
+              </item>
+            </graph_item>
+          </graph_items>
+        </graph>
+
+        <graph>
+          <name>DDoS Platform: Alerts &amp; Mitigations</name>
+          <width>900</width>
+          <height>200</height>
+          <graph_items>
+            <graph_item>
+              <color>F63100</color>
+              <item>
+                <host>DDoS Protection Platform</host>
+                <key>ddos.alerts.open</key>
+              </item>
+            </graph_item>
+            <graph_item>
+              <color>F7A531</color>
+              <item>
+                <host>DDoS Protection Platform</host>
+                <key>ddos.mitigations.active</key>
+              </item>
+            </graph_item>
+          </graph_items>
+        </graph>
+      </graphs>
+
+    </template>
+  </templates>
+
+  <!-- ═══════════════════════════════════════════
+       STANDALONE VALUE MAPS
+  ═══════════════════════════════════════════ -->
+  <value_maps>
+    <value_map>
+      <name>DDoS Health Status</name>
+      <mappings>
+        <mapping>
+          <value>ok</value>
+          <newvalue>OK</newvalue>
+        </mapping>
+        <mapping>
+          <value>not_ready</value>
+          <newvalue>NOT READY</newvalue>
+        </mapping>
+        <mapping>
+          <value>dead</value>
+          <newvalue>DEAD</newvalue>
+        </mapping>
+      </mappings>
+    </value_map>
+  </value_maps>
+
+</zabbix_export>

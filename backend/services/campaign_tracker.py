@@ -100,7 +100,71 @@ class CampaignTracker:
         )
 
 
-def _infer_campaign_type(alert_type: str) -> str:
+    async def cross_isp_correlate(
+        self, db: Session, window_hours: int = 1
+    ) -> list[dict]:
+        """Detect coordinated botnet campaigns spanning multiple ISP tenants.
+
+        Looks for ``AttackCampaign`` records across *different* ISPs that share
+        one or more source ASNs within the given time window.  A match indicates
+        that the same botnet is attacking multiple customers simultaneously.
+
+        Args:
+            db: SQLAlchemy database session.
+            window_hours: Look-back window in hours (default 1).
+
+        Returns:
+            List of correlation dicts, each containing::
+
+                {
+                    "source_asn": str,
+                    "campaign_ids": [int, ...],
+                    "isp_ids": [int, ...],
+                    "total_alerts": int,
+                    "peak_pps": int,
+                }
+        """
+        window_start = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+        active = (
+            db.query(AttackCampaign)
+            .filter(
+                AttackCampaign.status == "active",
+                AttackCampaign.last_seen >= window_start,
+            )
+            .all()
+        )
+
+        # Build index: source_asn -> [campaign_id, ...]
+        asn_index: dict[str, list] = {}
+        for campaign in active:
+            for asn in campaign.source_asns or []:
+                asn_index.setdefault(str(asn), []).append(campaign)
+
+        correlations: list[dict] = []
+        for asn, campaigns in asn_index.items():
+            isp_ids = list({c.isp_id for c in campaigns if c.isp_id})
+            if len(isp_ids) < 2:
+                # Only interesting when >= 2 different ISPs are attacked
+                continue
+            correlations.append(
+                {
+                    "source_asn": asn,
+                    "campaign_ids": [c.id for c in campaigns],
+                    "isp_ids": isp_ids,
+                    "total_alerts": sum(c.total_alerts or 0 for c in campaigns),
+                    "peak_pps": max((c.peak_pps or 0) for c in campaigns),
+                }
+            )
+
+        correlations.sort(key=lambda x: x["peak_pps"], reverse=True)
+        if correlations:
+            logger.warning(
+                "Cross-ISP correlation: %d coordinated campaign group(s) detected",
+                len(correlations),
+            )
+        return correlations
+
+
     volumetric = {"syn_flood", "udp_flood", "icmp_flood", "volumetric"}
     application = {"dns_amplification", "http_flood", "slowloris", "application"}
     if alert_type.lower() in volumetric:

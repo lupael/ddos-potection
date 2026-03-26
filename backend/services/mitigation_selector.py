@@ -89,6 +89,45 @@ class MitigationSelector:
         )
 
 
+    def trigger_preemptive(
+        self,
+        prefix: str,
+        risk_score: float,
+        risk_threshold: float = 70.0,
+    ) -> Optional[str]:
+        """Apply a lightweight pre-emptive mitigation action when the risk score
+        is high but no active attack has been detected yet.
+
+        Args:
+            prefix: The IP prefix at risk (e.g., ``"203.0.113.0/24"``).
+            risk_score: Current risk score (0–100) from the risk scorer service.
+            risk_threshold: Minimum risk score required to trigger pre-emptive action.
+                Defaults to 70.
+
+        Returns:
+            The pre-emptive action string if triggered, or ``None`` if the risk
+            score is below the threshold.
+        """
+        if risk_score < risk_threshold:
+            logger.debug(
+                "Pre-emptive mitigation skipped for %s: score %.1f < threshold %.1f",
+                prefix,
+                risk_score,
+                risk_threshold,
+            )
+            return None
+
+        # Use the first (lightest) action in the default chain
+        action = self.get_escalation_chain("default")[0]
+        logger.info(
+            "Pre-emptive mitigation triggered for prefix %s (score %.1f): action=%s",
+            prefix,
+            risk_score,
+            action,
+        )
+        return action
+
+
 class AutoEscalationManager:
     """Tracks mitigation attempts per incident and decides when to escalate.
 
