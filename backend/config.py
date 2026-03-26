@@ -1,5 +1,78 @@
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
+
+
+# ---------------------------------------------------------------------------
+# Sub-models (plain BaseModel – not loaded from env directly)
+# ---------------------------------------------------------------------------
+
+class DatabaseSettings(BaseModel):
+    DATABASE_URL: str = "postgresql://ddos_user:ddos_pass@localhost:5432/ddos_platform"
+
+
+class RedisSettings(BaseModel):
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+
+
+class DetectionSettings(BaseModel):
+    SYN_FLOOD_THRESHOLD: int = 10000
+    UDP_FLOOD_THRESHOLD: int = 50000
+    ICMP_FLOOD_THRESHOLD: int = 10000
+    DNS_AMPLIFICATION_THRESHOLD: int = 500
+    NTP_AMPLIFICATION_THRESHOLD: int = 468
+    MEMCACHED_AMPLIFICATION_THRESHOLD: int = 1400
+    SSDP_AMPLIFICATION_THRESHOLD: int = 400
+    TCP_RST_FLOOD_THRESHOLD: int = 5000
+    TCP_ACK_FLOOD_THRESHOLD: int = 10000
+    ENTROPY_THRESHOLD: float = 3.5
+    VOLUMETRIC_SRC_ENTROPY_THRESHOLD: float = 5.0
+    VOLUMETRIC_DST_ENTROPY_THRESHOLD: float = 2.0
+    SCANNING_SRC_ENTROPY_THRESHOLD: float = 4.0
+    SCANNING_DST_ENTROPY_THRESHOLD: float = 4.0
+
+
+class NotificationSettings(BaseModel):
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    ALERT_EMAIL: str = "admin@example.com"
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+    SLACK_WEBHOOK_URL: str = ""
+    TEAMS_WEBHOOK_URL: str = ""
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_PHONE_NUMBER: str = ""
+
+
+class BGPSettings(BaseModel):
+    BGP_ENABLED: bool = False
+    BGP_DAEMON: str = "exabgp"
+    BGP_BLACKHOLE_NEXTHOP: str = "192.0.2.1"
+    BGP_BLACKHOLE_COMMUNITY: str = "65535:666"
+    EXABGP_CMD_PIPE: str = "/var/run/exabgp.cmd"
+    FRR_VTYSH_CMD: str = "/usr/bin/vtysh"
+    BIRD_CMD: str = "birdc"
+    BIRD_CONTROL_SOCKET: str = "/var/run/bird/bird.ctl"
+
+
+class CaptureSettings(BaseModel):
+    PCAP_ENABLED: bool = True
+    PCAP_DIR: str = "/var/lib/ddos-protection/pcaps"
+    PCAP_MAX_PACKETS: int = 10000
+    VLAN_UNTAGGING_ENABLED: bool = True
+    AF_PACKET_ENABLED: bool = True
+    AF_XDP_ENABLED: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Root settings class – all flat fields are kept for backward compatibility.
+# Sub-model instances are populated automatically via model_validator.
+# ---------------------------------------------------------------------------
 
 class Settings(BaseSettings):
     # API Settings
@@ -115,7 +188,92 @@ class Settings(BaseSettings):
     WEBHOOK_MAX_RETRIES: int = 5          # Maximum delivery retries (exponential back-off)
     WEBHOOK_RETRY_BACKOFF: float = 2.0    # Multiplier for retry delay
     WEBHOOK_TIMEOUT: int = 10             # HTTP request timeout in seconds
-    
+
+    # HTTP Flood / Slowloris Detection
+    HTTP_FLOOD_THRESHOLD: int = 10000     # requests per minute
+    SLOWLORIS_THRESHOLD: int = 500        # half-open connections
+
+    # DNS Water-Torture Detection
+    DNS_NXDOMAIN_THRESHOLD: int = 1000    # NXDOMAIN responses per minute
+
+    # ML Adaptive Baselines
+    BASELINE_WINDOW_SIZE: int = 1000      # rolling buffer size per prefix
+    BASELINE_MIN_SAMPLES: int = 100       # minimum samples before ML kicks in
+
+    # Anomaly Detector Poll Interval (fallback when no Redis event received)
+    DETECTOR_POLL_INTERVAL: int = 30      # seconds
+
+    # ---------------------------------------------------------------------------
+    # Sub-model instances – populated after all flat fields are validated.
+    # External code may use settings.database.DATABASE_URL etc. as an alternative
+    # to the flat settings.DATABASE_URL attribute.
+    # ---------------------------------------------------------------------------
+    database: Optional[DatabaseSettings] = None
+    redis: Optional[RedisSettings] = None
+    detection: Optional[DetectionSettings] = None
+    notification: Optional[NotificationSettings] = None
+    bgp: Optional[BGPSettings] = None
+    capture: Optional[CaptureSettings] = None
+
+    def model_post_init(self, __context: object) -> None:
+        """Populate sub-model instances from the already-validated flat fields."""
+        object.__setattr__(self, "database", DatabaseSettings(
+            DATABASE_URL=self.DATABASE_URL,
+        ))
+        object.__setattr__(self, "redis", RedisSettings(
+            REDIS_HOST=self.REDIS_HOST,
+            REDIS_PORT=self.REDIS_PORT,
+            REDIS_DB=self.REDIS_DB,
+        ))
+        object.__setattr__(self, "detection", DetectionSettings(
+            SYN_FLOOD_THRESHOLD=self.SYN_FLOOD_THRESHOLD,
+            UDP_FLOOD_THRESHOLD=self.UDP_FLOOD_THRESHOLD,
+            ICMP_FLOOD_THRESHOLD=self.ICMP_FLOOD_THRESHOLD,
+            DNS_AMPLIFICATION_THRESHOLD=self.DNS_AMPLIFICATION_THRESHOLD,
+            NTP_AMPLIFICATION_THRESHOLD=self.NTP_AMPLIFICATION_THRESHOLD,
+            MEMCACHED_AMPLIFICATION_THRESHOLD=self.MEMCACHED_AMPLIFICATION_THRESHOLD,
+            SSDP_AMPLIFICATION_THRESHOLD=self.SSDP_AMPLIFICATION_THRESHOLD,
+            TCP_RST_FLOOD_THRESHOLD=self.TCP_RST_FLOOD_THRESHOLD,
+            TCP_ACK_FLOOD_THRESHOLD=self.TCP_ACK_FLOOD_THRESHOLD,
+            ENTROPY_THRESHOLD=self.ENTROPY_THRESHOLD,
+            VOLUMETRIC_SRC_ENTROPY_THRESHOLD=self.VOLUMETRIC_SRC_ENTROPY_THRESHOLD,
+            VOLUMETRIC_DST_ENTROPY_THRESHOLD=self.VOLUMETRIC_DST_ENTROPY_THRESHOLD,
+            SCANNING_SRC_ENTROPY_THRESHOLD=self.SCANNING_SRC_ENTROPY_THRESHOLD,
+            SCANNING_DST_ENTROPY_THRESHOLD=self.SCANNING_DST_ENTROPY_THRESHOLD,
+        ))
+        object.__setattr__(self, "notification", NotificationSettings(
+            SMTP_HOST=self.SMTP_HOST,
+            SMTP_PORT=self.SMTP_PORT,
+            SMTP_USER=self.SMTP_USER,
+            SMTP_PASSWORD=self.SMTP_PASSWORD,
+            ALERT_EMAIL=self.ALERT_EMAIL,
+            TELEGRAM_BOT_TOKEN=self.TELEGRAM_BOT_TOKEN,
+            TELEGRAM_CHAT_ID=self.TELEGRAM_CHAT_ID,
+            SLACK_WEBHOOK_URL=self.SLACK_WEBHOOK_URL,
+            TEAMS_WEBHOOK_URL=self.TEAMS_WEBHOOK_URL,
+            TWILIO_ACCOUNT_SID=self.TWILIO_ACCOUNT_SID,
+            TWILIO_AUTH_TOKEN=self.TWILIO_AUTH_TOKEN,
+            TWILIO_PHONE_NUMBER=self.TWILIO_PHONE_NUMBER,
+        ))
+        object.__setattr__(self, "bgp", BGPSettings(
+            BGP_ENABLED=self.BGP_ENABLED,
+            BGP_DAEMON=self.BGP_DAEMON,
+            BGP_BLACKHOLE_NEXTHOP=self.BGP_BLACKHOLE_NEXTHOP,
+            BGP_BLACKHOLE_COMMUNITY=self.BGP_BLACKHOLE_COMMUNITY,
+            EXABGP_CMD_PIPE=self.EXABGP_CMD_PIPE,
+            FRR_VTYSH_CMD=self.FRR_VTYSH_CMD,
+            BIRD_CMD=self.BIRD_CMD,
+            BIRD_CONTROL_SOCKET=self.BIRD_CONTROL_SOCKET,
+        ))
+        object.__setattr__(self, "capture", CaptureSettings(
+            PCAP_ENABLED=self.PCAP_ENABLED,
+            PCAP_DIR=self.PCAP_DIR,
+            PCAP_MAX_PACKETS=self.PCAP_MAX_PACKETS,
+            VLAN_UNTAGGING_ENABLED=self.VLAN_UNTAGGING_ENABLED,
+            AF_PACKET_ENABLED=self.AF_PACKET_ENABLED,
+            AF_XDP_ENABLED=self.AF_XDP_ENABLED,
+        ))
+
     class Config:
         env_file = ".env"
 

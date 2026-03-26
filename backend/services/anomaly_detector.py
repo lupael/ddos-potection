@@ -7,7 +7,7 @@ import json
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import List, Optional
 from collections import defaultdict, Counter
 import math
 
@@ -645,7 +645,13 @@ class AnomalyDetector:
             print(f"Error sending alert notifications: {e}")
     
     def run_detection_loop(self):
-        """Main detection loop"""
+        """Main detection loop driven by Redis pub/sub events.
+
+        Subscribes to ``ddos:flow_events``.  Each incoming message immediately
+        triggers all detection methods.  A fallback timer ensures detection
+        still runs at least every ``DETECTOR_POLL_INTERVAL`` seconds even when
+        no messages arrive.
+        """
         print("Starting anomaly detection engine...")
         print("Detection methods:")
         print("  - SYN Flood Detection")
@@ -660,31 +666,305 @@ class AnomalyDetector:
         print("  - Multi-dimensional Entropy Analysis")
         if self.hostgroup_manager:
             print("  - Hostgroup Threshold Monitoring")
-        
+
+        poll_interval = getattr(settings, "DETECTOR_POLL_INTERVAL", 30)
+        pubsub = self.redis_client.pubsub()
+        pubsub.subscribe("ddos:flow_events")
+
+        last_run = time.time()
+
         while True:
             try:
-                # Run all detections
-                self.detect_syn_flood()
-                self.detect_udp_flood()
-                self.detect_icmp_flood()
-                self.detect_dns_amplification()
-                self.detect_ntp_amplification()
-                self.detect_memcached_amplification()
-                self.detect_ssdp_amplification()
-                self.detect_tcp_rst_flood()
-                self.detect_tcp_ack_flood()
-                self.detect_entropy_anomaly()
-                
-                # Check hostgroup thresholds if available
-                if self.hostgroup_manager:
-                    self.hostgroup_manager.monitor_traffic()
-                
-                # Sleep for a bit before next check
-                time.sleep(10)
-                
+                # Block up to 1 second waiting for a message; avoids busy-spin
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                now = time.time()
+
+                if message is not None or (now - last_run) >= poll_interval:
+                    self._run_all_detections()
+                    last_run = time.time()
+
             except Exception as e:
                 print(f"Error in detection loop: {e}")
                 time.sleep(5)
+
+    def _run_all_detections(self):
+        """Execute every registered detection method once."""
+        try:
+            self.detect_syn_flood()
+            self.detect_udp_flood()
+            self.detect_icmp_flood()
+            self.detect_dns_amplification()
+            self.detect_ntp_amplification()
+            self.detect_memcached_amplification()
+            self.detect_ssdp_amplification()
+            self.detect_tcp_rst_flood()
+            self.detect_tcp_ack_flood()
+            self.detect_entropy_anomaly()
+
+            if self.hostgroup_manager:
+                self.hostgroup_manager.monitor_traffic()
+        except Exception as e:
+            print(f"Error running detections: {e}")
+
+    async def detect_http_flood(
+        self,
+        target_ip: str,
+        http_request_count: int,
+        time_window_seconds: int = 60,
+        isp_id: int = 1,
+    ) -> Optional["Alert"]:
+        """Detect HTTP flood: high request rate to a single target.
+
+        Uses Redis counter ``http_req:{target_ip}`` accumulated by the caller.
+        Returns a newly created Alert if the threshold is exceeded, else None.
+        """
+        try:
+            threshold = getattr(settings, "HTTP_FLOOD_THRESHOLD", 10000)
+            redis_key = f"http_req:{target_ip}"
+
+            current = self.redis_client.incrby(redis_key, http_request_count)
+            self.redis_client.expire(redis_key, time_window_seconds)
+
+            if current > threshold:
+                self.create_alert(
+                    isp_id=isp_id,
+                    alert_type="http_flood",
+                    severity="high",
+                    target_ip=target_ip,
+                    description=(
+                        f"HTTP flood detected: {current} requests/{time_window_seconds}s "
+                        f"to {target_ip} (threshold {threshold})"
+                    ),
+                )
+                db = SessionLocal()
+                try:
+                    recent = datetime.now(timezone.utc) - timedelta(minutes=1)
+                    alert = (
+                        db.query(Alert)
+                        .filter(
+                            Alert.alert_type == "http_flood",
+                            Alert.target_ip == target_ip,
+                            Alert.created_at >= recent,
+                        )
+                        .order_by(Alert.created_at.desc())
+                        .first()
+                    )
+                    return alert
+                finally:
+                    db.close()
+        except Exception as e:
+            logger.error("Error in HTTP flood detection: %s", e)
+        return None
+
+    async def detect_slowloris(
+        self,
+        target_ip: str,
+        half_open_connections: int,
+        isp_id: int = 1,
+    ) -> Optional["Alert"]:
+        """Detect Slowloris: many partial/half-open HTTP connections.
+
+        Returns a newly created Alert if the threshold is exceeded, else None.
+        """
+        try:
+            threshold = getattr(settings, "SLOWLORIS_THRESHOLD", 500)
+            if half_open_connections > threshold:
+                self.create_alert(
+                    isp_id=isp_id,
+                    alert_type="slowloris",
+                    severity="high",
+                    target_ip=target_ip,
+                    description=(
+                        f"Slowloris detected: {half_open_connections} half-open connections "
+                        f"to {target_ip} (threshold {threshold})"
+                    ),
+                )
+                db = SessionLocal()
+                try:
+                    recent = datetime.now(timezone.utc) - timedelta(minutes=1)
+                    alert = (
+                        db.query(Alert)
+                        .filter(
+                            Alert.alert_type == "slowloris",
+                            Alert.target_ip == target_ip,
+                            Alert.created_at >= recent,
+                        )
+                        .order_by(Alert.created_at.desc())
+                        .first()
+                    )
+                    return alert
+                finally:
+                    db.close()
+        except Exception as e:
+            logger.error("Error in Slowloris detection: %s", e)
+        return None
+
+    async def detect_dns_water_torture(
+        self,
+        target_dns_server: str,
+        nxdomain_count: int,
+        time_window_seconds: int = 60,
+        isp_id: int = 1,
+    ) -> Optional["Alert"]:
+        """Detect DNS water torture: high NXDOMAIN response rate.
+
+        Uses Redis counter ``dns_nxdomain:{target_dns_server}``.
+        Returns a newly created Alert if the threshold is exceeded, else None.
+        """
+        try:
+            threshold = getattr(settings, "DNS_NXDOMAIN_THRESHOLD", 1000)
+            redis_key = f"dns_nxdomain:{target_dns_server}"
+
+            current = self.redis_client.incrby(redis_key, nxdomain_count)
+            self.redis_client.expire(redis_key, time_window_seconds)
+
+            if current > threshold:
+                self.create_alert(
+                    isp_id=isp_id,
+                    alert_type="dns_water_torture",
+                    severity="high",
+                    target_ip=target_dns_server,
+                    description=(
+                        f"DNS water torture detected: {current} NXDOMAINs/{time_window_seconds}s "
+                        f"to {target_dns_server} (threshold {threshold})"
+                    ),
+                )
+                db = SessionLocal()
+                try:
+                    recent = datetime.now(timezone.utc) - timedelta(minutes=1)
+                    alert = (
+                        db.query(Alert)
+                        .filter(
+                            Alert.alert_type == "dns_water_torture",
+                            Alert.target_ip == target_dns_server,
+                            Alert.created_at >= recent,
+                        )
+                        .order_by(Alert.created_at.desc())
+                        .first()
+                    )
+                    return alert
+                finally:
+                    db.close()
+        except Exception as e:
+            logger.error("Error in DNS water torture detection: %s", e)
+        return None
+
+    async def detect_bgp_hijack(
+        self,
+        prefix: str,
+        expected_origin_asn: int,
+        observed_origin_asn: int,
+        isp_id: int = 1,
+    ) -> Optional["Alert"]:
+        """Detect potential BGP hijack: prefix announced from unexpected ASN.
+
+        Returns a newly created Alert if a mismatch is detected, else None.
+        """
+        try:
+            if observed_origin_asn != expected_origin_asn:
+                self.create_alert(
+                    isp_id=isp_id,
+                    alert_type="bgp_hijack",
+                    severity="critical",
+                    target_ip=prefix,
+                    description=(
+                        f"BGP hijack detected for prefix {prefix}: "
+                        f"expected ASN {expected_origin_asn}, "
+                        f"observed ASN {observed_origin_asn}"
+                    ),
+                )
+                db = SessionLocal()
+                try:
+                    recent = datetime.now(timezone.utc) - timedelta(minutes=1)
+                    alert = (
+                        db.query(Alert)
+                        .filter(
+                            Alert.alert_type == "bgp_hijack",
+                            Alert.target_ip == prefix,
+                            Alert.created_at >= recent,
+                        )
+                        .order_by(Alert.created_at.desc())
+                        .first()
+                    )
+                    return alert
+                finally:
+                    db.close()
+        except Exception as e:
+            logger.error("Error in BGP hijack detection: %s", e)
+        return None
+
+    async def detect_ip_spoofing(
+        self,
+        source_ip: str,
+        ingress_prefix: str,
+        registered_prefixes: list,
+        isp_id: int = 1,
+    ) -> Optional["Alert"]:
+        """uRPF-style check: source IP must fall within a registered prefix.
+
+        If *source_ip* is not contained in any of *registered_prefixes*, a
+        medium-severity Alert is created and returned.
+        """
+        import ipaddress
+        try:
+            try:
+                src_addr = ipaddress.ip_address(source_ip)
+            except ValueError:
+                logger.warning("detect_ip_spoofing: invalid source_ip %r", source_ip)
+                return None
+
+            for prefix in registered_prefixes:
+                try:
+                    if src_addr in ipaddress.ip_network(prefix, strict=False):
+                        return None  # source is legitimate
+                except ValueError:
+                    continue
+
+            # Source not found in any registered prefix → possible spoofing
+            self.create_alert(
+                isp_id=isp_id,
+                alert_type="ip_spoofing",
+                severity="medium",
+                source_ip=source_ip,
+                target_ip=ingress_prefix,
+                description=(
+                    f"Possible IP spoofing: {source_ip} arrived on {ingress_prefix} "
+                    f"but is not in registered prefixes"
+                ),
+            )
+            db = SessionLocal()
+            try:
+                recent = datetime.now(timezone.utc) - timedelta(minutes=1)
+                alert = (
+                    db.query(Alert)
+                    .filter(
+                        Alert.alert_type == "ip_spoofing",
+                        Alert.source_ip == source_ip,
+                        Alert.created_at >= recent,
+                    )
+                    .order_by(Alert.created_at.desc())
+                    .first()
+                )
+                return alert
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error("Error in IP spoofing detection: %s", e)
+        return None
+
+
+def publish_flow_event(redis_client, flow_data: dict) -> None:
+    """Publish a flow event to the ``ddos:flow_events`` Redis channel.
+
+    Call this from the traffic collector after processing each flow so that
+    the anomaly detector is triggered immediately rather than waiting for the
+    poll interval.
+    """
+    try:
+        redis_client.publish("ddos:flow_events", json.dumps(flow_data))
+    except Exception as e:
+        logger.warning("Failed to publish flow event: %s", e)
+
 
 def main():
     detector = AnomalyDetector()

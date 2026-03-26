@@ -6,7 +6,7 @@ import ipaddress
 import os
 import errno
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import SessionLocal
 from models.models import MitigationAction, Alert
@@ -846,6 +846,94 @@ class MitigationService:
             
         finally:
             db.close()
+
+import logging as _logging
+
+_msm_logger = _logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Mitigation lifecycle state machine
+# ---------------------------------------------------------------------------
+
+MITIGATION_STATES = frozenset({
+    "detected",
+    "mitigating",
+    "verifying",
+    "resolved",
+    "escalating",
+})
+
+VALID_TRANSITIONS: dict = {
+    "detected":   {"mitigating"},
+    "mitigating": {"verifying"},
+    "verifying":  {"resolved", "escalating"},
+    "escalating": {"mitigating"},
+    "resolved":   set(),
+}
+
+
+class MitigationStateMachine:
+    """Lifecycle state machine for a single mitigation instance."""
+
+    def transition(self, alert_id: int, new_state: str, db) -> bool:
+        """Transition a MitigationAction to *new_state*.
+
+        Returns True on success, False if the transition is illegal or the
+        record cannot be found.
+        """
+        if new_state not in MITIGATION_STATES:
+            _msm_logger.error("Unknown state '%s' for alert_id=%d", new_state, alert_id)
+            return False
+
+        action = (
+            db.query(MitigationAction)
+            .filter(MitigationAction.alert_id == alert_id)
+            .order_by(MitigationAction.created_at.desc())
+            .first()
+        )
+        if action is None:
+            _msm_logger.error("No MitigationAction found for alert_id=%d", alert_id)
+            return False
+
+        current_state = action.status
+        allowed = VALID_TRANSITIONS.get(current_state, set())
+        if new_state not in allowed:
+            _msm_logger.warning(
+                "Illegal transition %s -> %s for alert_id=%d",
+                current_state, new_state, alert_id,
+            )
+            return False
+
+        action.status = new_state
+        if new_state == "resolved":
+            action.completed_at = datetime.now(timezone.utc)
+        db.commit()
+        _msm_logger.info(
+            "MitigationAction alert_id=%d: %s -> %s", alert_id, current_state, new_state
+        )
+        return True
+
+
+def verify_mitigation(
+    alert_id: int,
+    current_pps: float,
+    threshold_pps: float,
+    db=None,
+) -> bool:
+    """Check whether traffic has dropped below threshold.
+
+    Transitions the latest MitigationAction for *alert_id* to ``resolved``
+    when traffic is below the threshold, or to ``escalating`` otherwise.
+
+    Returns True if traffic is below threshold (resolved), False otherwise.
+    """
+    sm = MitigationStateMachine()
+    resolved = current_pps < threshold_pps
+    if db is not None:
+        new_state = "resolved" if resolved else "escalating"
+        sm.transition(alert_id, new_state, db)
+    return resolved
+
 
 def main():
     MitigationService()
