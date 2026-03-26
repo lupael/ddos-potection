@@ -6,7 +6,7 @@ time-series forecasting an LSTM would provide.  The class exposes the same
 interface so the router layer is decoupled from the underlying model.
 """
 import logging
-import pickle
+import warnings
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,14 @@ try:
 except ImportError:
     _SKLEARN_AVAILABLE = False
     logger.warning("scikit-learn not installed – LSTMPredictor will use stub predictions")
+
+# Prefer joblib (sklearn-recommended serialiser) over pickle for ML models.
+try:
+    import joblib as _serialiser
+    _USE_JOBLIB = True
+except ImportError:
+    import pickle as _serialiser  # type: ignore[no-redef]
+    _USE_JOBLIB = False
 
 
 class LSTMPredictor:
@@ -150,7 +158,7 @@ class LSTMPredictor:
             return False
         try:
             with open(path, "wb") as fh:
-                pickle.dump(self._model, fh)
+                _serialiser.dump(self._model, fh)
             logger.info("LSTMPredictor model saved to %s", path)
             return True
         except Exception as exc:
@@ -168,7 +176,7 @@ class LSTMPredictor:
         """
         try:
             with open(path, "rb") as fh:
-                self._model = pickle.load(fh)
+                self._model = _serialiser.load(fh)
             self._trained = True
             logger.info("LSTMPredictor model loaded from %s", path)
             return True

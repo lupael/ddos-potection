@@ -79,7 +79,11 @@ async def upload_gcp_flow_log(
         raise HTTPException(status_code=422, detail="'records' must be a list")
 
     parser = GCPFlowParser()
-    flows = [f for r in records if (f := parser.parse_record(r)) is not None]
+    flows = []
+    for r in records:
+        flow = parser.parse_record(r)
+        if flow is not None:
+            flows.append(flow)
 
     protocols: dict[str, int] = {}
     for flow in flows:

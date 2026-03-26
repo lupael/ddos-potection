@@ -134,7 +134,7 @@ class GCPFlowParser:
                 "protocol": protocol,
                 "packets": _safe_int(record.get("packets_sent")),
                 "bytes": _safe_int(record.get("bytes_sent")),
-                "action": "ACCEPT",  # GCP logs only accepted flows by default
+                "action": "ACCEPT",  # GCP VPC Flow Logs only capture accepted flows
                 "timestamp": record.get("start_time"),
                 "end_time": record.get("end_time"),
                 "src_instance": record.get("src_instance", {}).get("vm_name"),

@@ -556,7 +556,7 @@ class AnomalyDetector:
         stored both in the DB ``description`` prefix and in the Redis payload
         so downstream consumers can filter accordingly.
         """
-        shadow = getattr(settings, "SHADOW_MODE", False)
+        shadow = settings.SHADOW_MODE
         shadow_prefix = "[SHADOW] " if shadow else ""
         self.create_alert(
             isp_id=isp_id,

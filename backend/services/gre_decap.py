@@ -135,7 +135,7 @@ class GREDecapsulator:
             if not parsed:
                 return None
 
-            protocol_type: int = parsed.get("protocol_type", 0)
+            protocol_type: int = parsed.get("protocol_type") or 0
             if protocol_type not in (_ETHERTYPE_IPV4, _ETHERTYPE_IPV6):
                 logger.debug(
                     "decapsulate: unsupported inner EtherType 0x%04x", protocol_type

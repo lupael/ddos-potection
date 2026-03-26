@@ -254,8 +254,8 @@ class Settings(BaseSettings):
     # TLS-wrapped NetFlow receiver
     TLS_FLOW_ENABLED: bool = False
     TLS_FLOW_PORT: int = 2056
-    TLS_FLOW_CERTFILE: str = ""
-    TLS_FLOW_KEYFILE: str = ""
+    TLS_FLOW_CERTFILE: Optional[str] = None
+    TLS_FLOW_KEYFILE: Optional[str] = None
 
     # ---------------------------------------------------------------------------
     # Sub-model instances – populated after all flat fields are validated.
