@@ -20,6 +20,8 @@ class NotificationService:
         self.smtp_enabled = bool(settings.SMTP_HOST and settings.SMTP_USER)
         self.telegram_enabled = bool(settings.TELEGRAM_BOT_TOKEN)
         self.sms_enabled = False  # Will be enabled if Twilio credentials are provided
+        self.slack_enabled = bool(getattr(settings, 'SLACK_WEBHOOK_URL', ''))
+        self.teams_enabled = bool(getattr(settings, 'TEAMS_WEBHOOK_URL', ''))
         
         # Check for Twilio credentials
         if hasattr(settings, 'TWILIO_ACCOUNT_SID') and hasattr(settings, 'TWILIO_AUTH_TOKEN'):
@@ -119,6 +121,73 @@ class NotificationService:
             print(f"Error sending SMS: {e}")
             return False
     
+    async def send_slack(self, message: str, webhook_url: str = None) -> bool:
+        """Send notification to a Slack channel via Incoming Webhook."""
+        url = webhook_url or getattr(settings, 'SLACK_WEBHOOK_URL', '')
+        if not url:
+            print("Slack notifications not configured")
+            return False
+
+        try:
+            payload = {"text": message}
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload, timeout=10)
+                response.raise_for_status()
+            print("Slack message sent")
+            return True
+        except Exception as e:
+            print(f"Error sending Slack message: {e}")
+            return False
+
+    async def send_teams(self, message: str, webhook_url: str = None) -> bool:
+        """Send notification to a Microsoft Teams channel via Incoming Webhook."""
+        url = webhook_url or getattr(settings, 'TEAMS_WEBHOOK_URL', '')
+        if not url:
+            print("Microsoft Teams notifications not configured")
+            return False
+
+        try:
+            # Teams uses a simple Adaptive Card / legacy MessageCard format
+            payload = {
+                "@type": "MessageCard",
+                "@context": "http://schema.org/extensions",
+                "text": message,
+            }
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload, timeout=10)
+                response.raise_for_status()
+            print("Teams message sent")
+            return True
+        except Exception as e:
+            print(f"Error sending Teams message: {e}")
+            return False
+
+    def format_alert_slack(self, alert: Dict) -> str:
+        """Format alert data for Slack notification."""
+        severity_emoji = {
+            'critical': ':red_circle:',
+            'high': ':large_orange_circle:',
+            'medium': ':large_yellow_circle:',
+            'low': ':large_blue_circle:'
+        }
+        emoji = severity_emoji.get(alert['severity'], ':white_circle:')
+        return (
+            f"{emoji} *DDoS Alert: {alert['alert_type']}* [{alert['severity'].upper()}]\n"
+            f"*Target:* `{alert['target_ip']}` | *Source:* `{alert.get('source_ip', 'unknown')}`\n"
+            f"*Time:* {alert.get('timestamp', datetime.utcnow().isoformat())}\n"
+            f"{alert['description']}"
+        )
+
+    def format_alert_teams(self, alert: Dict) -> str:
+        """Format alert data for Microsoft Teams notification."""
+        return (
+            f"🚨 **DDoS Alert: {alert['alert_type']}** [{alert['severity'].upper()}]\n\n"
+            f"**Target IP:** {alert['target_ip']}  |  "
+            f"**Source IP:** {alert.get('source_ip', 'unknown')}\n\n"
+            f"**Time:** {alert.get('timestamp', datetime.utcnow().isoformat())}\n\n"
+            f"{alert['description']}"
+        )
+
     def format_alert_email(self, alert: Dict) -> tuple[str, str, str]:
         """Format alert data for email notification"""
         subject = f"🚨 DDoS Alert: {alert['alert_type']} [{alert['severity'].upper()}]"
@@ -240,7 +309,7 @@ Please review and take appropriate action if necessary.
         
         Args:
             alert: Alert data dictionary
-            channels: List of channels to send notification (email, telegram, sms)
+            channels: List of channels to send notification (email, telegram, sms, slack, teams)
             recipients: Dictionary mapping channel to recipient (e.g., {'email': 'admin@example.com', 'telegram': '123456789'})
         
         Returns:
@@ -262,6 +331,18 @@ Please review and take appropriate action if necessary.
         if 'sms' in channels and 'sms' in recipients:
             message = self.format_alert_sms(alert)
             results['sms'] = await self.send_sms(recipients['sms'], message)
+        
+        # Send Slack
+        if 'slack' in channels:
+            message = self.format_alert_slack(alert)
+            webhook_url = recipients.get('slack') or getattr(settings, 'SLACK_WEBHOOK_URL', '')
+            results['slack'] = await self.send_slack(message, webhook_url)
+        
+        # Send Microsoft Teams
+        if 'teams' in channels:
+            message = self.format_alert_teams(alert)
+            webhook_url = recipients.get('teams') or getattr(settings, 'TEAMS_WEBHOOK_URL', '')
+            results['teams'] = await self.send_teams(message, webhook_url)
         
         return results
     
@@ -307,6 +388,16 @@ async def notify_alert(alert: Dict, isp_preferences: Dict = None):
     # Add default Telegram chat ID if configured and not in recipients
     if 'telegram' in channels and 'telegram' not in recipients and settings.TELEGRAM_CHAT_ID:
         recipients['telegram'] = settings.TELEGRAM_CHAT_ID
+    
+    # Add Slack webhook URL if configured and not in recipients
+    slack_url = getattr(settings, 'SLACK_WEBHOOK_URL', '')
+    if 'slack' in channels and 'slack' not in recipients and slack_url:
+        recipients['slack'] = slack_url
+
+    # Add Teams webhook URL if configured and not in recipients
+    teams_url = getattr(settings, 'TEAMS_WEBHOOK_URL', '')
+    if 'teams' in channels and 'teams' not in recipients and teams_url:
+        recipients['teams'] = teams_url
     
     results = await notification_service.send_alert_notification(alert, channels, recipients)
     

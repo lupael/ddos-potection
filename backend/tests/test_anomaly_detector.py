@@ -55,6 +55,8 @@ class TestAnomalyDetector:
         
         mock_db = MagicMock()
         mock_session.return_value = mock_db
+        # No existing alert so create_alert proceeds to add()
+        mock_db.query.return_value.filter.return_value.first.return_value = None
         
         result = detector.detect_syn_flood(isp_id=1)
         
@@ -84,14 +86,18 @@ class TestAnomalyDetector:
     @patch('services.anomaly_detector.SessionLocal')
     def test_detect_udp_flood(self, mock_session, detector):
         """Test UDP flood detection"""
-        # Mock Redis to return high UDP count for a destination
+        # Use a recent timestamp so the time-window check passes
+        import time as _time
+        recent_ts = int(_time.time())
         detector.redis_client.scan_iter.return_value = [
-            'traffic:dst:1:10.0.0.50:1234567890'
+            f'traffic:dst:1:10.0.0.50:{recent_ts}'
         ]
         detector.redis_client.get.side_effect = lambda key: 60000 if '10.0.0.50' in key else 0
         
         mock_db = MagicMock()
         mock_session.return_value = mock_db
+        # No existing alert so create_alert proceeds to add()
+        mock_db.query.return_value.filter.return_value.first.return_value = None
         
         result = detector.detect_udp_flood(isp_id=1)
         
@@ -101,14 +107,18 @@ class TestAnomalyDetector:
     @patch('services.anomaly_detector.SessionLocal')
     def test_detect_icmp_flood(self, mock_session, detector):
         """Test ICMP flood detection"""
-        # Mock Redis to return high ICMP count
+        # Use a recent timestamp so the time-window check passes
+        import time as _time
+        recent_ts = int(_time.time())
         detector.redis_client.scan_iter.return_value = [
-            'traffic:dst:1:10.0.0.50:1234567890'
+            f'traffic:dst:1:10.0.0.50:{recent_ts}'
         ]
         detector.redis_client.get.side_effect = lambda key: 15000 if '10.0.0.50' in key else 0
         
         mock_db = MagicMock()
         mock_session.return_value = mock_db
+        # No existing alert so create_alert proceeds to add()
+        mock_db.query.return_value.filter.return_value.first.return_value = None
         
         result = detector.detect_icmp_flood(isp_id=1)
         
@@ -133,6 +143,8 @@ class TestAnomalyDetector:
         
         mock_query = mock_db.query.return_value
         mock_query.filter.return_value.limit.return_value.all.return_value = mock_logs
+        # No existing alert so create_alert proceeds to add()
+        mock_query.filter.return_value.first.return_value = None
         
         result = detector.detect_entropy_anomaly(isp_id=1)
         
@@ -157,6 +169,8 @@ class TestAnomalyDetector:
         
         mock_query = mock_db.query.return_value
         mock_query.filter.return_value.limit.return_value.all.return_value = mock_logs
+        # No existing alert so create_alert proceeds to add()
+        mock_query.filter.return_value.first.return_value = None
         
         result = detector.detect_entropy_anomaly(isp_id=1)
         
@@ -178,6 +192,8 @@ class TestAnomalyDetector:
         
         mock_query = mock_db.query.return_value
         mock_query.filter.return_value.group_by.return_value.all.return_value = [mock_stat]
+        # No existing alert so create_alert proceeds to add()
+        mock_query.filter.return_value.first.return_value = None
         
         result = detector.detect_dns_amplification(isp_id=1)
         

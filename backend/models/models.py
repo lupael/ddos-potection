@@ -135,7 +135,7 @@ class Payment(Base):
     payment_gateway_id = Column(String(255))  # Transaction ID from payment gateway
     status = Column(String(50), default="pending")  # pending, completed, failed, refunded
     description = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True)  # Store additional payment data
+    payment_metadata = Column(JSON, nullable=True)  # Store additional payment data
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
     
@@ -155,3 +155,54 @@ class Invoice(Base):
     paid_date = Column(DateTime(timezone=True), nullable=True)
     file_path = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class SLARecord(Base):
+    """Tracks time-to-detect (TTD) and time-to-mitigate (TTM) per incident."""
+    __tablename__ = "sla_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"), nullable=False, index=True)
+    alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=False, index=True)
+    # Timestamps for SLA calculation
+    attack_started_at = Column(DateTime(timezone=True), nullable=True)
+    detected_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    mitigated_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    # Calculated durations in seconds (populated on update)
+    ttd_seconds = Column(Integer, nullable=True)   # time-to-detect
+    ttm_seconds = Column(Integer, nullable=True)   # time-to-mitigate
+    # SLA compliance flag (computed against subscription tier)
+    sla_met = Column(Boolean, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class AuditLog(Base):
+    """Immutable audit trail for all mutation API calls."""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, nullable=True, index=True)   # None for super-admin actions
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    username = Column(String(255), nullable=True)
+    method = Column(String(10), nullable=False)            # POST, PUT, DELETE, PATCH
+    path = Column(String(500), nullable=False)
+    status_code = Column(Integer, nullable=True)
+    client_ip = Column(String(45), nullable=True)
+    request_body = Column(Text, nullable=True)             # JSON snapshot (PII stripped)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class Webhook(Base):
+    """Registered webhook endpoints for alert/mitigation event delivery."""
+    __tablename__ = "webhooks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    isp_id = Column(Integer, ForeignKey("isps.id"), nullable=False, index=True)
+    url = Column(String(2048), nullable=False)
+    secret = Column(String(255), nullable=False)           # HMAC-SHA256 signing key
+    events = Column(JSON, nullable=False)                  # list of event types to deliver
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

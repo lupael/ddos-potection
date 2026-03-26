@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime, timedelta
-from fpdf2 import FPDF
+from fpdf import FPDF
 import csv
 import os
 

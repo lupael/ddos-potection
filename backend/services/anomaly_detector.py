@@ -315,7 +315,231 @@ class AnomalyDetector:
         finally:
             db.close()
     
-    def create_alert(self, isp_id: int, alert_type: str, severity: str, 
+    def detect_ntp_amplification(self, isp_id: int = 1) -> bool:
+        """Detect NTP amplification attacks (high UDP/123 response volume).
+
+        Looks for destinations that receive many large UDP packets on port 123.
+        NTP monlist responses are 468 bytes, so bytes_per_packet >> request_size
+        indicates an amplification attack.
+        """
+        db = SessionLocal()
+        try:
+            one_min_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
+
+            from sqlalchemy import func
+            udp_stats = db.query(
+                TrafficLog.dest_ip,
+                func.sum(TrafficLog.packets).label('total_packets'),
+                func.sum(TrafficLog.bytes).label('total_bytes')
+            ).filter(
+                TrafficLog.isp_id == isp_id,
+                TrafficLog.protocol == 'UDP',
+                TrafficLog.timestamp >= one_min_ago
+            ).group_by(TrafficLog.dest_ip).all()
+
+            detected = False
+            threshold = getattr(settings, 'NTP_AMPLIFICATION_THRESHOLD', 468)
+            for stat in udp_stats:
+                if stat.total_packets and stat.total_packets > 0:
+                    bpp = stat.total_bytes / stat.total_packets
+                    if bpp >= threshold and stat.total_packets > 1000:
+                        self.create_alert(
+                            isp_id=isp_id,
+                            alert_type='ntp_amplification',
+                            severity='high',
+                            target_ip=stat.dest_ip,
+                            description=(
+                                f'NTP amplification detected: {stat.total_packets} pkts, '
+                                f'{bpp:.0f} bytes/pkt to {stat.dest_ip}'
+                            )
+                        )
+                        detected = True
+            return detected
+        except Exception as e:
+            logger.error(f"Error in NTP amplification detection: {e}")
+            return False
+        finally:
+            db.close()
+
+    def detect_memcached_amplification(self, isp_id: int = 1) -> bool:
+        """Detect Memcached amplification attacks (UDP/11211 large responses).
+
+        Memcached UDP responses can be up to 1MB, making it a very high-
+        amplification vector. We trigger when per-packet size exceeds 1 400 bytes.
+        """
+        db = SessionLocal()
+        try:
+            one_min_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
+
+            from sqlalchemy import func
+            udp_stats = db.query(
+                TrafficLog.dest_ip,
+                func.sum(TrafficLog.packets).label('total_packets'),
+                func.sum(TrafficLog.bytes).label('total_bytes')
+            ).filter(
+                TrafficLog.isp_id == isp_id,
+                TrafficLog.protocol == 'UDP',
+                TrafficLog.timestamp >= one_min_ago
+            ).group_by(TrafficLog.dest_ip).all()
+
+            detected = False
+            threshold = getattr(settings, 'MEMCACHED_AMPLIFICATION_THRESHOLD', 1400)
+            for stat in udp_stats:
+                if stat.total_packets and stat.total_packets > 0:
+                    bpp = stat.total_bytes / stat.total_packets
+                    if bpp >= threshold and stat.total_packets > 500:
+                        self.create_alert(
+                            isp_id=isp_id,
+                            alert_type='memcached_amplification',
+                            severity='critical',
+                            target_ip=stat.dest_ip,
+                            description=(
+                                f'Memcached amplification detected: {stat.total_packets} pkts, '
+                                f'{bpp:.0f} bytes/pkt to {stat.dest_ip}'
+                            )
+                        )
+                        detected = True
+            return detected
+        except Exception as e:
+            logger.error(f"Error in Memcached amplification detection: {e}")
+            return False
+        finally:
+            db.close()
+
+    def detect_ssdp_amplification(self, isp_id: int = 1) -> bool:
+        """Detect SSDP amplification attacks (UDP/1900 large responses).
+
+        SSDP (Simple Service Discovery Protocol) responses can be much larger
+        than requests, achieving ~30x amplification. We trigger when per-packet
+        size is notably large on the SSDP source port.
+        """
+        db = SessionLocal()
+        try:
+            one_min_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
+
+            from sqlalchemy import func
+            udp_stats = db.query(
+                TrafficLog.dest_ip,
+                func.sum(TrafficLog.packets).label('total_packets'),
+                func.sum(TrafficLog.bytes).label('total_bytes')
+            ).filter(
+                TrafficLog.isp_id == isp_id,
+                TrafficLog.protocol == 'UDP',
+                TrafficLog.timestamp >= one_min_ago
+            ).group_by(TrafficLog.dest_ip).all()
+
+            detected = False
+            threshold = getattr(settings, 'SSDP_AMPLIFICATION_THRESHOLD', 400)
+            for stat in udp_stats:
+                if stat.total_packets and stat.total_packets > 0:
+                    bpp = stat.total_bytes / stat.total_packets
+                    if bpp >= threshold and stat.total_packets > 1000:
+                        self.create_alert(
+                            isp_id=isp_id,
+                            alert_type='ssdp_amplification',
+                            severity='high',
+                            target_ip=stat.dest_ip,
+                            description=(
+                                f'SSDP amplification detected: {stat.total_packets} pkts, '
+                                f'{bpp:.0f} bytes/pkt to {stat.dest_ip}'
+                            )
+                        )
+                        detected = True
+            return detected
+        except Exception as e:
+            logger.error(f"Error in SSDP amplification detection: {e}")
+            return False
+        finally:
+            db.close()
+
+    def detect_tcp_rst_flood(self, isp_id: int = 1) -> bool:
+        """Detect TCP RST flood attacks.
+
+        Checks for a high rate of TCP RST packets targeting a single destination.
+        A high RST-to-total-TCP ratio suggests RST injection or a RST flood.
+        """
+        try:
+            current_second = int(datetime.now(timezone.utc).timestamp())
+            detected = False
+            window_start = current_second - 59
+            rst_counts: dict = {}
+
+            pattern = f"rst:{isp_id}:*"
+            for key in self.redis_client.scan_iter(match=pattern):
+                parts = key.split(':')
+                if len(parts) < 4:
+                    continue
+                try:
+                    key_second = int(parts[-1])
+                except ValueError:
+                    continue
+                if key_second < window_start or key_second > current_second:
+                    continue
+                dst_ip = ':'.join(parts[2:-1])
+                count = int(self.redis_client.get(key) or 0)
+                rst_counts[dst_ip] = rst_counts.get(dst_ip, 0) + count
+
+            threshold = getattr(settings, 'TCP_RST_FLOOD_THRESHOLD', 5000)
+            for dst_ip, count in rst_counts.items():
+                if count > threshold:
+                    self.create_alert(
+                        isp_id=isp_id,
+                        alert_type='tcp_rst_flood',
+                        severity='high',
+                        target_ip=dst_ip,
+                        description=f'TCP RST flood detected: {count} RST pkts/min to {dst_ip}'
+                    )
+                    detected = True
+            return detected
+        except Exception as e:
+            logger.error(f"Error in TCP RST flood detection: {e}")
+            return False
+
+    def detect_tcp_ack_flood(self, isp_id: int = 1) -> bool:
+        """Detect TCP ACK flood attacks (pure ACK packets without prior SYN).
+
+        Checks Redis counters for high ACK packet rates. Pure ACK floods are
+        used to exhaust firewall state-tracking resources.
+        """
+        try:
+            current_second = int(datetime.now(timezone.utc).timestamp())
+            detected = False
+            window_start = current_second - 59
+            ack_counts: dict = {}
+
+            pattern = f"ack:{isp_id}:*"
+            for key in self.redis_client.scan_iter(match=pattern):
+                parts = key.split(':')
+                if len(parts) < 4:
+                    continue
+                try:
+                    key_second = int(parts[-1])
+                except ValueError:
+                    continue
+                if key_second < window_start or key_second > current_second:
+                    continue
+                dst_ip = ':'.join(parts[2:-1])
+                count = int(self.redis_client.get(key) or 0)
+                ack_counts[dst_ip] = ack_counts.get(dst_ip, 0) + count
+
+            threshold = getattr(settings, 'TCP_ACK_FLOOD_THRESHOLD', 10000)
+            for dst_ip, count in ack_counts.items():
+                if count > threshold:
+                    self.create_alert(
+                        isp_id=isp_id,
+                        alert_type='tcp_ack_flood',
+                        severity='high',
+                        target_ip=dst_ip,
+                        description=f'TCP ACK flood detected: {count} ACK pkts/min to {dst_ip}'
+                    )
+                    detected = True
+            return detected
+        except Exception as e:
+            logger.error(f"Error in TCP ACK flood detection: {e}")
+            return False
+
+
+    def create_alert(self, isp_id: int, alert_type: str, severity: str,
                      target_ip: str, description: str, source_ip: str = 'unknown'):
         """Create an alert in the database and publish to Redis"""
         db = SessionLocal()
@@ -428,6 +652,11 @@ class AnomalyDetector:
         print("  - UDP Flood Detection")
         print("  - ICMP Flood Detection")
         print("  - DNS Amplification Detection")
+        print("  - NTP Amplification Detection")
+        print("  - Memcached Amplification Detection")
+        print("  - SSDP Amplification Detection")
+        print("  - TCP RST Flood Detection")
+        print("  - TCP ACK Flood Detection")
         print("  - Multi-dimensional Entropy Analysis")
         if self.hostgroup_manager:
             print("  - Hostgroup Threshold Monitoring")
@@ -439,6 +668,11 @@ class AnomalyDetector:
                 self.detect_udp_flood()
                 self.detect_icmp_flood()
                 self.detect_dns_amplification()
+                self.detect_ntp_amplification()
+                self.detect_memcached_amplification()
+                self.detect_ssdp_amplification()
+                self.detect_tcp_rst_flood()
+                self.detect_tcp_ack_flood()
                 self.detect_entropy_anomaly()
                 
                 # Check hostgroup thresholds if available

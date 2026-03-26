@@ -129,7 +129,7 @@ async def create_stripe_payment_intent(
             payment_method="stripe",
             payment_gateway_id=intent.id,
             status="pending",
-            metadata={"stripe_payment_intent_id": intent.id}
+            payment_metadata={"stripe_payment_intent_id": intent.id}
         )
         db.add(payment)
         db.commit()
@@ -219,7 +219,7 @@ async def create_paypal_order(
         payment_method="paypal",
         payment_gateway_id=f"PAYPAL-PLACEHOLDER-{uuid.uuid4()}",
         status="pending",
-        metadata={"note": "PayPal integration - implement with PayPal SDK"}
+        payment_metadata={"note": "PayPal integration - implement with PayPal SDK"}
     )
     db.add(payment)
     db.commit()
@@ -263,7 +263,7 @@ async def create_bkash_payment(
         payment_method="bkash",
         payment_gateway_id=f"BKASH-PLACEHOLDER-{uuid.uuid4()}",
         status="pending",
-        metadata={
+        payment_metadata={
             "phone_number": payment_data.phone_number,
             "note": "bKash integration - implement with bKash API"
         }

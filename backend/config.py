@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     UDP_FLOOD_THRESHOLD: int = 50000  # packets per second
     ICMP_FLOOD_THRESHOLD: int = 10000  # packets per minute
     DNS_AMPLIFICATION_THRESHOLD: int = 500  # bytes per packet
+    NTP_AMPLIFICATION_THRESHOLD: int = 468   # bytes per packet (NTP monlist response size)
+    MEMCACHED_AMPLIFICATION_THRESHOLD: int = 1400  # bytes per packet
+    SSDP_AMPLIFICATION_THRESHOLD: int = 400  # bytes per packet
+    TCP_RST_FLOOD_THRESHOLD: int = 5000   # RST packets per minute
+    TCP_ACK_FLOOD_THRESHOLD: int = 10000  # ACK packets per minute
     ENTROPY_THRESHOLD: float = 3.5
     VOLUMETRIC_SRC_ENTROPY_THRESHOLD: float = 5.0
     VOLUMETRIC_DST_ENTROPY_THRESHOLD: float = 2.0
@@ -53,6 +58,8 @@ class Settings(BaseSettings):
     ALERT_EMAIL: str = "admin@example.com"
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
+    SLACK_WEBHOOK_URL: str = ""       # Slack Incoming Webhook URL
+    TEAMS_WEBHOOK_URL: str = ""       # Microsoft Teams Incoming Webhook URL
     
     # SMS/Twilio
     TWILIO_ACCOUNT_SID: str = ""
@@ -103,6 +110,11 @@ class Settings(BaseSettings):
     SCRIPTS_ENABLED: bool = True  # Enable script execution for block/notify
     SCRIPTS_DIR: str = "/etc/ddos-protection/scripts"  # Directory for scripts
     SCRIPT_TIMEOUT: int = 30  # Maximum script execution time in seconds
+
+    # Webhook Delivery
+    WEBHOOK_MAX_RETRIES: int = 5          # Maximum delivery retries (exponential back-off)
+    WEBHOOK_RETRY_BACKOFF: float = 2.0    # Multiplier for retry delay
+    WEBHOOK_TIMEOUT: int = 10             # HTTP request timeout in seconds
     
     class Config:
         env_file = ".env"

@@ -11,44 +11,42 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 
 ## 🔴 Critical — Must fix before next production release
 
-- [ ] **[Security] Sanitise `subprocess` calls in `mitigation_service.py`**
+- [x] **[Security] Sanitise `subprocess` calls in `mitigation_service.py`**
   - File: `backend/services/mitigation_service.py`
-  - Risk: rule conditions that contain shell metacharacters could achieve command injection
-  - Fix: validate IP/CIDR inputs with `ipaddress` module before passing to iptables/nftables; use argument list (not shell=True)
+  - Fixed: `apply_iptables_rule`, `apply_nftables_rule`, `apply_rate_limit` now validate IP/CIDR
+    with the `ipaddress` module before passing to subprocess; protocol names are allow-listed.
 
-- [ ] **[Security] PCAP download path traversal**
+- [x] **[Security] PCAP download path traversal**
   - File: `backend/routers/capture_router.py` — `GET /api/v1/capture/download/{file}`
-  - Risk: a crafted filename (e.g., `../../etc/passwd`) could read arbitrary files
-  - Fix: resolve the requested path and assert it is inside the configured PCAP directory
+  - Already fixed: path resolved and checked against capture directory.
 
 - [ ] **[Infra] Add Alembic for database migrations**
   - Without migrations, schema changes require manual SQL or full DB recreation
   - Steps: `pip install alembic`, `alembic init`, create initial migration from current models, add to CI
 
-- [ ] **[Health] Add `/health/live` and `/health/ready` endpoints**
+- [x] **[Health] Add `/health/live` and `/health/ready` endpoints**
   - File: `backend/main.py`
-  - Required by Kubernetes liveness/readiness probes
-  - `live` → always 200 if process is alive; `ready` → 200 only if DB + Redis reachable
+  - Added: `live` → always 200; `ready` → checks DB + Redis, returns 503 if unhealthy.
 
 ---
 
 ## 🟠 High Priority
 
-- [ ] **[Detection] NTP amplification detection**
+- [x] **[Detection] NTP amplification detection**
   - File: `backend/services/anomaly_detector.py`
-  - Add: high UDP/123 response rate (>amplification threshold) triggers `ntp_amplification` alert
+  - Added: `detect_ntp_amplification` — high UDP response rate > `NTP_AMPLIFICATION_THRESHOLD` (468 B/pkt).
 
-- [ ] **[Detection] Memcached amplification detection**
+- [x] **[Detection] Memcached amplification detection**
   - File: `backend/services/anomaly_detector.py`
-  - Add: UDP/11211 responses >1400 bytes triggers `memcached_amplification` alert
+  - Added: `detect_memcached_amplification` — UDP responses > `MEMCACHED_AMPLIFICATION_THRESHOLD` (1400 B/pkt).
 
-- [ ] **[Detection] SSDP amplification detection**
+- [x] **[Detection] SSDP amplification detection**
   - File: `backend/services/anomaly_detector.py`
-  - Add: UDP/1900 large responses triggers `ssdp_amplification` alert
+  - Added: `detect_ssdp_amplification` — UDP large responses > `SSDP_AMPLIFICATION_THRESHOLD` (400 B/pkt).
 
-- [ ] **[Detection] TCP RST flood and TCP ACK flood**
+- [x] **[Detection] TCP RST flood and TCP ACK flood**
   - File: `backend/services/anomaly_detector.py`
-  - Add: high RST/ACK ratio per source, and pure ACK floods without prior SYN
+  - Added: `detect_tcp_rst_flood` and `detect_tcp_ack_flood` using Redis counters.
 
 - [ ] **[GeoIP] Replace placeholder coordinates in attack map**
   - File: `backend/routers/attack_map_router.py`
@@ -73,11 +71,12 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
   - File: `backend/services/anomaly_detector.py`
   - Currently polls Redis with `asyncio.sleep(10)` — replace with event-driven consumer
 
-- [ ] **[Alerts] Add Slack and Microsoft Teams notification channels**
+- [x] **[Alerts] Add Slack and Microsoft Teams notification channels**
   - File: `backend/services/notification_service.py`
-  - Add alongside existing Email, Twilio SMS, Telegram
+  - Added `send_slack`, `send_teams`, `format_alert_slack`, `format_alert_teams`.
+  - Config: `SLACK_WEBHOOK_URL`, `TEAMS_WEBHOOK_URL`.
 
-- [ ] **[Observability] Add SLA tracking**
+- [x] **[Observability] Add SLA tracking**
   - Record TTD (time-to-detect) and TTM (time-to-mitigate) for every incident
   - New model: `SLARecord`; new router: `backend/routers/sla_router.py`
 
@@ -101,17 +100,17 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
   - Sources: Spamhaus DROP/EDROP, Emerging Threats, CINS Army, Feodo Tracker
   - Refresh hourly via Celery beat; store in Redis SET for O(1) lookup
 
-- [ ] **[Auth] Webhook system with HMAC-SHA256 signatures**
+- [x] **[Auth] Webhook system with HMAC-SHA256 signatures**
   - New files: `backend/services/webhook_service.py`, `backend/routers/webhook_router.py`
-  - Register URLs for alert/mitigation events; exponential-backoff retry on failure
+  - Register URLs for alert/mitigation events; exponential-backoff retry on failure.
 
 - [ ] **[RBAC] Customer self-service portal**
   - Add `customer` role to RBAC (read-only, scoped to their IP prefixes)
   - New frontend pages: MyProtection, MyAlerts, MyReports, MySettings
 
-- [ ] **[Compliance] Audit logging middleware**
+- [x] **[Compliance] Audit logging middleware**
   - New files: `backend/models/models.py` (AuditLog model), `backend/middleware/audit_middleware.py`
-  - Auto-log all POST/PUT/DELETE API calls: who, what, old value, new value, IP
+  - Auto-logs all POST/PUT/PATCH/DELETE API calls: who, what, old value, new value, IP.
 
 - [ ] **[HA] Horizontal Pod Autoscaler for Kubernetes**
   - File: `kubernetes/`
@@ -140,20 +139,29 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
 - [x] React 18 dashboard with Chart.js
 - [x] NetFlow v5/v9, sFlow v5, IPFIX collection
 - [x] SYN / UDP / ICMP / DNS-amp / entropy detection
+- [x] NTP / Memcached / SSDP amplification detection
+- [x] TCP RST flood and TCP ACK flood detection
 - [x] iptables, nftables, MikroTik API, BGP RTBH, FlowSpec mitigation
+- [x] Subprocess input validation in mitigation_service.py (iptables, nftables, tc)
 - [x] Multi-tenant ISP accounts with RBAC
 - [x] Stripe, PayPal, bKash billing
 - [x] 33 Prometheus metrics + 3 Grafana dashboards
 - [x] Email, Twilio SMS, Telegram notifications
+- [x] Slack and Microsoft Teams notifications
 - [x] AF_PACKET packet capture; AF_XDP with fallback
 - [x] VLAN untagging (802.1Q, 802.1ad, QinQ)
 - [x] Per-subnet hostgroups with longest-prefix-match
 - [x] WebSocket live attack map
 - [x] PDF/CSV/TXT report generation
 - [x] Docker Compose + Kubernetes YAML
-- [x] 9 pytest test modules (~100+ tests)
+- [x] 9+ pytest test modules (184+ tests)
 - [x] Prometheus / Grafana monitoring stack
 - [x] FastAPI security patch (CVE - python-multipart ≤0.0.6)
+- [x] PCAP download path traversal fix
+- [x] /health/live and /health/ready Kubernetes probe endpoints
+- [x] SLA tracking (SLARecord model + /api/v1/sla/ router)
+- [x] Audit logging middleware (AuditLog model + AuditMiddleware)
+- [x] Webhook system with HMAC-SHA256 signatures (/api/v1/webhooks/ router)
 
 ---
 

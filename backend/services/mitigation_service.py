@@ -35,15 +35,26 @@ class MitigationService:
     def apply_iptables_rule(self, action: str, ip: str, protocol: str = None) -> bool:
         """Apply iptables firewall rule"""
         try:
+            # Validate IP/CIDR before using it in a subprocess command
+            if not validate_prefix(ip):
+                print(f"iptables error: Invalid IP/CIDR: {ip!r}")
+                return False
+
+            # Validate protocol name to safe known values only
+            ALLOWED_PROTOCOLS = {"tcp", "udp", "icmp", "icmpv6", "all"}
+            if protocol and protocol.lower() not in ALLOWED_PROTOCOLS:
+                print(f"iptables error: Invalid protocol: {protocol!r}")
+                return False
+
             if action == "block":
                 cmd = ["iptables", "-A", "INPUT"]
                 if protocol:
                     cmd.extend(["-p", protocol.lower()])
                 cmd.extend(["-s", ip, "-j", "DROP"])
-                
+
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 return result.returncode == 0
-            
+
             elif action == "unblock":
                 cmd = ["iptables", "-D", "INPUT"]
                 if protocol:
@@ -51,23 +62,30 @@ class MitigationService:
                 cmd.extend(["-s", ip, "-j", "DROP"])
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 return result.returncode == 0
-                
+
+            print(f"iptables error: Unknown action: {action!r}")
+            return False
+
         except Exception as e:
             print(f"Error applying iptables rule: {e}")
-            return False
             return False
     
     def apply_nftables_rule(self, action: str, ip: str) -> bool:
         """Apply nftables firewall rule"""
         try:
+            # Validate IP/CIDR before using it in a subprocess command
+            if not validate_prefix(ip):
+                print(f"nftables error: Invalid IP/CIDR: {ip!r}")
+                return False
+
             if action == "block":
                 cmd = ["nft", "add", "rule", "inet", "filter", "input", "ip", "saddr", ip, "drop"]
             else:
                 cmd = ["nft", "delete", "rule", "inet", "filter", "input", "ip", "saddr", ip, "drop"]
-            
+
             result = subprocess.run(cmd, capture_output=True, text=True)
             return result.returncode == 0
-            
+
         except Exception as e:
             print(f"Error applying nftables rule: {e}")
             return False
@@ -758,6 +776,16 @@ class MitigationService:
     def apply_rate_limit(self, ip: str, rate: str = "1000/s") -> bool:
         """Apply rate limiting using tc (traffic control)"""
         try:
+            # Validate IP/CIDR before using it in a subprocess command
+            if not validate_prefix(ip):
+                print(f"tc rate-limit error: Invalid IP/CIDR: {ip!r}")
+                return False
+
+            # Validate rate format: only allow known tc rate suffixes (s, ms, us)
+            if not re.match(r'^\d+/(s|ms|us)$', rate):
+                print(f"tc rate-limit error: Invalid rate format: {rate!r}")
+                return False
+
             # Using Linux tc for rate limiting
             cmd = [
                 "tc", "filter", "add", "dev", "eth0", "protocol", "ip",
@@ -765,10 +793,10 @@ class MitigationService:
                 "match", "ip", "src", ip,
                 "police", "rate", rate, "burst", "100k", "drop"
             ]
-            
+
             result = subprocess.run(cmd, capture_output=True, text=True)
             return result.returncode == 0
-            
+
         except Exception as e:
             print(f"Error applying rate limit: {e}")
             return False

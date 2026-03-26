@@ -2,6 +2,7 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
+import redis as redis_lib
 
 from routers import (
     traffic_router,
@@ -14,11 +15,14 @@ from routers import (
     attack_map_router,
     hostgroup_router,
     capture_router,
-    traffic_collection_router
+    traffic_collection_router,
     subscription_router,
-    payment_router
+    payment_router,
 )
-from database import engine, Base
+from routers.sla_router import router as sla_router
+from routers.webhook_router import router as webhook_router
+from middleware.audit_middleware import AuditMiddleware
+from database import engine, Base, get_db
 from config import settings
 from services.metrics_collector import get_metrics_content, CONTENT_TYPE_LATEST
 
@@ -49,6 +53,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Audit logging middleware — logs all POST/PUT/PATCH/DELETE requests
+app.add_middleware(AuditMiddleware)
+
 # Include routers
 app.include_router(auth_router.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(traffic_router.router, prefix="/api/v1/traffic", tags=["Traffic"])
@@ -63,6 +70,8 @@ app.include_router(attack_map_router.router, prefix="/api/v1/attack-map", tags=[
 app.include_router(hostgroup_router.router)  # Already has prefix in router definition
 app.include_router(capture_router.router)  # Already has prefix in router definition
 app.include_router(traffic_collection_router.router, prefix="/api/v1/traffic-collection", tags=["Traffic Collection"])
+app.include_router(sla_router)
+app.include_router(webhook_router)
 
 @app.get("/")
 async def root():
@@ -75,6 +84,57 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/health/live", tags=["Health"])
+async def liveness():
+    """Kubernetes liveness probe — always 200 if the process is alive."""
+    return {"status": "alive"}
+
+@app.get("/health/ready", tags=["Health"])
+async def readiness():
+    """
+    Kubernetes readiness probe.
+    Returns 200 only when both PostgreSQL and Redis are reachable.
+    """
+    errors: list[str] = []
+
+    # Check PostgreSQL
+    try:
+        from sqlalchemy import text
+        db_gen = get_db()
+        db = next(db_gen)
+        try:
+            db.execute(text("SELECT 1"))
+        finally:
+            try:
+                next(db_gen)
+            except StopIteration:
+                pass
+    except Exception as exc:
+        errors.append(f"postgres: {exc}")
+
+    # Check Redis
+    try:
+        r = redis_lib.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            socket_connect_timeout=2,
+        )
+        r.ping()
+    except Exception as exc:
+        errors.append(f"redis: {exc}")
+
+    if errors:
+        from fastapi import Response as FastAPIResponse
+        import json
+        return FastAPIResponse(
+            content=json.dumps({"status": "not ready", "errors": errors}),
+            status_code=503,
+            media_type="application/json",
+        )
+
+    return {"status": "ready"}
 
 @app.get("/metrics")
 async def metrics():

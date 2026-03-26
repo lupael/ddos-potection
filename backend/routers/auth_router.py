@@ -62,6 +62,28 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
+
+async def get_current_user_from_token(token: str) -> Optional[User]:
+    """Decode a JWT token string and return the matching User, or None on failure.
+
+    This variant is used by non-FastAPI code (e.g. middleware) where there is
+    no database session injected via Depends.  A fresh session is created and
+    closed internally.
+    """
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if not username:
+            return None
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            return db.query(User).filter(User.username == username).first()
+        finally:
+            db.close()
+    except Exception:
+        return None
+
 @router.post("/register", response_model=Token)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
     # Check if user exists

@@ -36,27 +36,40 @@ class TrafficCollector:
         header = struct.unpack('!HHIIIIBBH', data[:24])
         version, count = header[0], header[1]
         
+        # RFC 3954 NetFlow v5 flow record is 48 bytes:
+        # srcaddr(4) dstaddr(4) nexthop(4) input(2) output(2)
+        # dPkts(4) dOctets(4) First(4) Last(4)
+        # srcport(2) dstport(2) pad1(1) tcp_flags(1) prot(1) tos(1)
+        # src_as(2) dst_as(2) src_mask(1) dst_mask(1) pad2(2)
+        FLOW_RECORD_FMT = '!IIIHHIIIIHHxBBBHHBBxx'
+        FLOW_RECORD_SIZE = struct.calcsize(FLOW_RECORD_FMT)  # 48 bytes
+
         flows = []
         offset = 24
         for i in range(count):
-            if offset + 48 > len(data):
+            if offset + FLOW_RECORD_SIZE > len(data):
                 break
             
-            flow_data = struct.unpack('!IIIHHIIIIHHBBBBHHH', data[offset:offset+48])
+            flow_data = struct.unpack(FLOW_RECORD_FMT, data[offset:offset + FLOW_RECORD_SIZE])
+            # Indices (x padding bytes are skipped by struct):
+            # [0]=srcaddr [1]=dstaddr [2]=nexthop [3]=input [4]=output
+            # [5]=dPkts   [6]=dOctets [7]=First   [8]=Last
+            # [9]=srcport [10]=dstport [11]=tcp_flags [12]=prot [13]=tos
+            # [14]=src_as [15]=dst_as  [16]=src_mask  [17]=dst_mask
             flow = {
                 'src_ip': socket.inet_ntoa(struct.pack('!I', flow_data[0])),
                 'dst_ip': socket.inet_ntoa(struct.pack('!I', flow_data[1])),
                 'next_hop': socket.inet_ntoa(struct.pack('!I', flow_data[2])),
-                'src_port': flow_data[4],
-                'dst_port': flow_data[5],
-                'packets': flow_data[6],
-                'bytes': flow_data[7],
-                'protocol': flow_data[11],
-                'tcp_flags': flow_data[12],
+                'src_port': flow_data[9],
+                'dst_port': flow_data[10],
+                'packets': flow_data[5],
+                'bytes': flow_data[6],
+                'protocol': flow_data[12],
+                'tcp_flags': flow_data[11],
                 'tos': flow_data[13]
             }
             flows.append(flow)
-            offset += 48
+            offset += FLOW_RECORD_SIZE
         
         return {'version': version, 'count': count, 'flows': flows}
     

@@ -23,27 +23,42 @@ class TestTrafficCollector:
             return collector
     
     def test_netflow_v5_parsing(self, collector):
-        """Test NetFlow v5 packet parsing"""
+        """Test NetFlow v5 packet parsing (RFC 3954 compliant 48-byte flow record)"""
         # Create a mock NetFlow v5 header
         header = struct.pack('!HHIIIIBBH', 5, 1, 0, 0, 0, 0, 0, 0, 0)
         
-        # Create a mock flow record
-        src_ip = socket.inet_aton('192.168.1.100')
-        dst_ip = socket.inet_aton('10.0.0.50')
-        next_hop = socket.inet_aton('192.168.1.1')
-        
-        flow_record = struct.pack('!III', 
-            struct.unpack('!I', src_ip)[0],
-            struct.unpack('!I', dst_ip)[0],
-            struct.unpack('!I', next_hop)[0]
+        # Create a RFC-compliant 48-byte flow record:
+        # srcaddr(4) dstaddr(4) nexthop(4) input(2) output(2)
+        # dPkts(4) dOctets(4) First(4) Last(4)
+        # srcport(2) dstport(2) pad1(1) tcp_flags(1) prot(1) tos(1)
+        # src_as(2) dst_as(2) src_mask(1) dst_mask(1) pad2(2)
+        FLOW_FMT = '!IIIHHIIIIHHxBBBHHBBxx'
+        src_ip_int = struct.unpack('!I', socket.inet_aton('192.168.1.100'))[0]
+        dst_ip_int = struct.unpack('!I', socket.inet_aton('10.0.0.50'))[0]
+        nexthop_int = struct.unpack('!I', socket.inet_aton('192.168.1.1'))[0]
+        flow_record = struct.pack(
+            FLOW_FMT,
+            src_ip_int,   # srcaddr
+            dst_ip_int,   # dstaddr
+            nexthop_int,  # nexthop
+            0,            # input interface
+            0,            # output interface
+            100,          # dPkts (packets)
+            50000,        # dOctets (bytes)
+            0,            # First (uptime ms)
+            0,            # Last  (uptime ms)
+            54321,        # srcport
+            80,           # dstport
+            # pad1 auto-filled by 'x'
+            0x02,         # tcp_flags
+            6,            # prot (TCP)
+            0,            # tos
+            0,            # src_as
+            0,            # dst_as
+            0,            # src_mask
+            0,            # dst_mask
+            # pad2 auto-filled by 'xx'
         )
-        flow_record += struct.pack('!HH', 0, 0)  # input/output interfaces
-        flow_record += struct.pack('!HH', 54321, 80)  # src_port, dst_port
-        flow_record += struct.pack('!II', 100, 50000)  # packets, bytes
-        flow_record += struct.pack('!II', 0, 0)  # first/last
-        flow_record += struct.pack('!HH', 0, 0)  # pad
-        flow_record += struct.pack('!BBBB', 6, 0x02, 0, 0)  # protocol, tcp_flags, tos, pad
-        flow_record += struct.pack('!HHH', 0, 0, 0)  # src_as, dst_as, pad
         
         packet = header + flow_record
         
