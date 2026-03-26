@@ -115,3 +115,7 @@ def delete_flow_source(
 
     db.delete(source)
     db.commit()
+    # Invalidate the Redis authorization cache for the removed IP
+    flow_authenticator._redis.delete(
+        f"flow_auth:authorized:{current_user.isp_id}:{source.source_ip}"
+    )

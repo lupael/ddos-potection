@@ -52,8 +52,9 @@ class GeoIPService:
             except Exception:
                 pass
 
-        # Deterministic stub based on IP hash
-        hash_val = int(hashlib.md5(ip.encode()).hexdigest(), 16)
+        # Deterministic stub based on IP hash (sha256, no cryptographic use)
+        hash_bytes = hashlib.sha256(ip.encode()).digest()
+        hash_val = int.from_bytes(hash_bytes[:8], "big")
         lat = ((hash_val % 180) - 90) + (hash_val % 100) / 1000.0
         lon = (((hash_val // 180) % 360) - 180) + (hash_val % 100) / 1000.0
         return {

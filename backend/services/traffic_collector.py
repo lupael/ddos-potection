@@ -475,13 +475,13 @@ class TrafficCollector:
             try:
                 from services.kafka_consumer import KafkaFlowProducer
                 import asyncio
-                producer = KafkaFlowProducer()
+                # Reuse a module-level producer singleton to avoid per-call setup overhead
+                producer = _get_kafka_producer()
                 loop = asyncio.new_event_loop()
                 try:
                     loop.run_until_complete(producer.start())
                     loop.run_until_complete(producer.publish_flow(flow))
                 finally:
-                    loop.run_until_complete(producer.stop())
                     loop.close()
                 return
             except Exception as exc:
@@ -681,6 +681,20 @@ class TrafficCollector:
         
         # Keep main thread alive
         netflow_thread.join()
+
+
+# Module-level Kafka producer singleton (lazy-initialised)
+_kafka_producer_instance = None
+
+
+def _get_kafka_producer():
+    """Return a reusable KafkaFlowProducer singleton."""
+    global _kafka_producer_instance
+    if _kafka_producer_instance is None:
+        from services.kafka_consumer import KafkaFlowProducer
+        _kafka_producer_instance = KafkaFlowProducer()
+    return _kafka_producer_instance
+
 
 def main():
     collector = TrafficCollector()

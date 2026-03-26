@@ -12,6 +12,9 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+# Record service start time for sysUpTime (centiseconds since process start)
+_SERVICE_START_TIME = time.time()
+
 try:
     from pysnmp.hlapi import (  # type: ignore
         CommunityData,
@@ -102,7 +105,8 @@ def _build_snmpv2c_trap(
     sys_uptime_oid = "1.3.6.1.2.1.1.3.0"
     snmp_trap_oid_oid = "1.3.6.1.6.3.1.1.4.1.0"
 
-    uptime_val = _ber_tlv(0x43, struct.pack("!I", int(time.monotonic() * 100) & 0xFFFFFFFF))
+    uptime_centiseconds = int((time.time() - _SERVICE_START_TIME) * 100) & 0xFFFFFFFF
+    uptime_val = _ber_tlv(0x43, struct.pack("!I", uptime_centiseconds))
     uptime_vb = _ber_tlv(0x30, _ber_oid(sys_uptime_oid) + uptime_val)
 
     trap_oid_val = _ber_oid(enterprise_oid)

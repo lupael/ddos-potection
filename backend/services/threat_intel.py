@@ -127,31 +127,16 @@ class ThreatIntelService:
 
     def get_threat_score(self, ip: str) -> int:
         """Return 0-100 threat score for *ip* based on feed membership."""
-        score = 0
         if not ip:
-            return score
+            return 0
         try:
-            addr = ipaddress.ip_address(ip)
+            ipaddress.ip_address(ip)
         except ValueError:
-            return score
+            return 0
 
-        if self._redis.sismember(_REDIS_BLOCKLIST_KEY, ip):
-            score += 40
-
-        # Check CIDR membership against all entries
-        for entry in self._redis.sscan_iter(_REDIS_BLOCKLIST_KEY):
-            if "/" in entry:
-                try:
-                    if addr in ipaddress.ip_network(entry, strict=False):
-                        score += 40
-                        break
-                except ValueError:
-                    pass
-
-        # RPKI invalid placeholder (+20)
-        # In production this would call an RPKI validator
-        score = min(score, 100)
-        return score
+        score = 40 if self.is_malicious(ip) else 0
+        # RPKI invalid placeholder — a real implementation would call an RPKI validator
+        return min(score, 100)
 
     def get_feed_stats(self) -> Dict[str, int]:
         """Return per-feed entry count stored in Redis."""

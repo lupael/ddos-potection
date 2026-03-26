@@ -46,5 +46,14 @@ async def refresh_feeds(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     import asyncio
-    asyncio.create_task(threat_intel_service.refresh_all_feeds())
+    import logging
+    _logger = logging.getLogger(__name__)
+
+    def _log_exception(task: asyncio.Task) -> None:
+        exc = task.exception()
+        if exc:
+            _logger.error("Background threat intel refresh failed: %s", exc)
+
+    task = asyncio.create_task(threat_intel_service.refresh_all_feeds())
+    task.add_done_callback(_log_exception)
     return {"message": "Feed refresh initiated"}
