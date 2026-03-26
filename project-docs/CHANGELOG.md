@@ -5,7 +5,45 @@ All notable changes to the DDoS Protection Platform will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] — 2026-03-26
+## [1.3.0] — 2026-03-26
+
+### Added
+
+#### Enterprise-grade UI Overhaul (Phase 5 – Styling & Branding)
+- **New CSS design system** (`frontend/src/styles/App.css`):
+  Complete rewrite with CSS custom properties (`--color-navy-*`, `--color-blue-*`,
+  `--color-green-*`, `--color-amber-*`, `--color-red-*`), semantic tokens, consistent
+  `box-shadow`/`border-radius`/`transition` variables, and a full dark-mode via
+  `.dark-mode` class and `prefers-color-scheme` media query.
+- **Design tokens** (`frontend/src/styles/theme.css`):
+  Replaced generic variables with a complete palette of 40+ named tokens spanning
+  brand, accent, status (success/warning/danger/info), and surface colours.
+- **Improved Navbar** (`frontend/src/components/Navbar.js`):
+  Dark navy sticky header; emoji + text navigation labels; active-link highlight
+  (blue tint); animated dropdown with section header and icon labels; accessible
+  keyboard navigation (`Enter`/`Space`/`Escape`); polished logout button with hover
+  danger colouring; `useLocation`-based active-class for current route.
+- **Redesigned Dashboard** (`frontend/src/pages/Dashboard.js`):
+  Five KPI stat cards with coloured accent bars, contextual icons, trend lines, and
+  status dot; Alert Status table with status-dot indicators; Severity Distribution
+  table; Quick Actions row; 6-item System Status grid with per-service health dots.
+- **Redesigned Login** (`frontend/src/pages/Login.js`):
+  Dark glassmorphism card on radial-gradient navy background; gradient brand icon;
+  styled inputs with `rgba` backgrounds; animated inline spinner on submit; security
+  disclaimer footer.
+- **BGP/RTBH route** (`frontend/src/App.js`):
+  Added missing `/bgp-blackholing` `PrivateRoute` and `BgpBlackholing` import so the
+  BGP Blackholing page is accessible from the navbar.
+- **Screenshots** (`docs/screenshots/`):
+  Four enterprise-grade UI screenshots (login, dashboard, alerts, traffic) captured
+  at 1440×900 and embedded in `README.md`.
+
+### Changed
+- `README.md`: Screenshots section replaced with new embedded repo-relative images
+  and updated "Beautiful Dashboard" feature bullet list.
+- `frontend/src/App.js`: Added import of `theme.css` alongside `App.css`.
+
+
 
 ### Added
 

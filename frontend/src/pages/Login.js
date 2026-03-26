@@ -19,45 +19,107 @@ function Login() {
       localStorage.setItem('token', response.data.access_token);
       navigate('/');
     } catch (err) {
-      setError('Invalid username or password');
+      if (err.response?.status === 401 || err.response?.status === 400) {
+        setError('Invalid username or password.');
+      } else if (err.request) {
+        setError('Unable to connect to server. Please try again.');
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h2>DDoS Protection Platform</h2>
-        {error && <div className="alert alert-error">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              disabled={loading}
-            />
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-card">
+          {/* Logo / Brand */}
+          <div className="login-logo">
+            <div className="login-logo-icon">🛡️</div>
+            <span className="login-title">DDoS Shield</span>
           </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+          <p className="login-subtitle">Enterprise DDoS Protection Platform</p>
+
+          {error && (
+            <div className="alert alert-error" role="alert">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                required
+                disabled={loading}
+                autoComplete="username"
+                autoFocus
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                disabled={loading}
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary btn-block"
               disabled={loading}
-            />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{width: '100%'}} disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+              style={{ marginTop: '0.5rem' }}
+            >
+              {loading ? (
+                <>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: '14px',
+                      height: '14px',
+                      border: '2px solid rgba(255,255,255,0.4)',
+                      borderTopColor: '#fff',
+                      borderRadius: '50%',
+                      animation: 'spin 0.7s linear infinite',
+                    }}
+                  />
+                  Signing in…
+                </>
+              ) : (
+                'Sign In →'
+              )}
+            </button>
+          </form>
+
+          <p style={{
+            marginTop: '1.5rem',
+            fontSize: '0.75rem',
+            color: 'rgba(255,255,255,0.3)',
+            textAlign: 'center',
+            lineHeight: 1.5,
+          }}>
+            Protected by enterprise-grade security.<br />
+            Unauthorized access is prohibited.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
 export default Login;
+

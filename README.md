@@ -65,10 +65,13 @@ Real-time traffic monitoring • Anomaly detection • Automated mitigation • 
 - **Custom Rule Engine**: Define rate limits, IP blocks, protocol filters, and geo-blocking
 
 ### Beautiful Dashboard
-- **React-based UI**: Modern, responsive web interface
+- **React 18 UI**: Modern, responsive enterprise-grade web interface
+- **Dark Navbar**: Sticky dark navy navigation with active-link highlighting and emoji icons
+- **KPI Stat Cards**: Colour-coded metric cards with trend indicators and contextual icons
 - **Real-time Charts**: Live traffic visualization and attack patterns
 - **Rule Management**: Easy-to-use interface for adding/removing rules
-- **Alert Dashboard**: Monitor and respond to security events
+- **Alert Dashboard**: Severity-coded (critical/high/medium/low) alert feed with one-click mitigate/resolve
+- **System Status Panel**: Per-service health indicators on the dashboard
 - **Settings Panel**: Configure thresholds, notifications, and API keys
 
 ### Multi-ISP Support
@@ -87,39 +90,41 @@ Real-time traffic monitoring • Anomaly detection • Automated mitigation • 
 
 ## 📸 Screenshots
 
-### Dashboard Overview
+The screenshots below show the redesigned enterprise-grade UI (dark navbar, colour-coded severity badges, KPI stat cards, and real-time status indicators).
+
+### 🔐 Login Page
 <div align="center">
 
-![Dashboard](https://github.com/user-attachments/assets/477edd08-aee4-4c7a-9b7a-b07452e2252e)
+![Login Page](docs/screenshots/login.png)
 
-*Real-time monitoring dashboard showing traffic statistics, active alerts, and system health*
+*Dark glassmorphism login screen with gradient branding and enterprise security messaging*
 
 </div>
 
-### Traffic Monitor
+### 📊 Operations Dashboard
 <div align="center">
 
-![Traffic Monitor](https://github.com/user-attachments/assets/3b9173ed-128a-4c9f-98ef-6e81a4b6148c)
+![Dashboard](docs/screenshots/dashboard.png)
 
-*Live traffic visualization with protocol distribution and attack pattern detection*
+*Real-time KPI cards with colour-coded status indicators, alert severity breakdown, quick-action shortcuts, and live system health panel*
 
 </div>
 
-### Alert Management
+### 🚨 Alert Management
 <div align="center">
 
-![Alerts](https://github.com/user-attachments/assets/e3646f08-32fe-4d81-8f07-612535751de1)
+![Alert Management](docs/screenshots/alerts.png)
 
-*Comprehensive alert dashboard with severity levels and real-time notifications*
+*Colour-coded severity badges (critical/high/medium/low), per-alert mitigation and resolve actions, live feed of active threats*
 
 </div>
 
-### Rule Management
+### 📡 Traffic Monitor
 <div align="center">
 
-![Rules](https://github.com/user-attachments/assets/42a87a3f-4bb7-48df-a71c-792f62c5935d)
+![Traffic Monitor](docs/screenshots/traffic.png)
 
-*Intuitive interface for creating and managing DDoS mitigation rules*
+*Protocol distribution bar-chart, live traffic log with anomaly flags, and per-flow bytes/packet counters*
 
 </div>
 
