@@ -2,8 +2,8 @@
 
 > **AI agents:** Read [`AI_INSTRUCTIONS.md`](AI_INSTRUCTIONS.md) before making any changes to this repository.
 
-**Report Date:** 2026-03-25  
-**Version:** 1.0.1  
+**Report Date:** 2026-03-26  
+**Version:** 1.1.0  
 **Status:** ✅ Production-Ready (with noted caveats)
 
 ---

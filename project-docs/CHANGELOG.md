@@ -9,7 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### Tasks 21–30: Customer Portal, GDPR, Audit Export, Branding, Campaigns, Redis HA, K8s HPA/Network-Policies, Helm, Forecasting, RPKI
+#### Tasks 1–10: Foundation, Detection, ML Baselines
+- **Task 1 — Alembic Migrations**: `backend/alembic.ini`, `backend/alembic/env.py`,
+  `backend/alembic/script.py.mako`, `backend/alembic/versions/001_initial_schema.py`.
+  Creates all 13 production tables with indexes; supports offline SQL generation.
+- **Task 2 — Config Sub-models**: `backend/config.py` now exposes `DatabaseSettings`,
+  `RedisSettings`, `DetectionSettings`, `NotificationSettings`, `BGPSettings`, `CaptureSettings`
+  sub-model instances on `settings.*`. All flat fields preserved for backward compatibility.
+- **Task 3 — Mitigation State Machine**: `MitigationStateMachine` class with `MITIGATION_STATES`,
+  `VALID_TRANSITIONS` constants, `transition(alert_id, new_state, db)` with legality checks,
+  and `verify_mitigation()` that resolves or escalates based on pps vs threshold.
+- **Task 4 — Event-driven Anomaly Detector**: `run_detection_loop` now subscribes to
+  `ddos:flow_events` Redis pub/sub channel; `publish_flow_event()` helper added.
+  Falls back to polling every `DETECTOR_POLL_INTERVAL` (default 30s) seconds.
+- **Task 5 — SO_REUSEPORT Collector**: `create_reuseport_socket(port, host)` and
+  `MultiProcessCollector(num_workers, port)` added to `services/traffic_collector.py`.
+- **Task 6 — HTTP Flood / Slowloris Detection**: `detect_http_flood()` and
+  `detect_slowloris()` added to `AnomalyDetector`. Config: `HTTP_FLOOD_THRESHOLD`,
+  `SLOWLORIS_THRESHOLD`.
+- **Task 7 — DNS Water-Torture Detection**: `detect_dns_water_torture()` added to
+  `AnomalyDetector`. Config: `DNS_NXDOMAIN_THRESHOLD`.
+- **Task 8 — BGP Hijack Indicator**: `detect_bgp_hijack(prefix, expected_asn, observed_asn)`
+  added to `AnomalyDetector`.
+- **Task 9 — IP Spoofing Detection**: `detect_ip_spoofing(source_ip, ingress_prefix, registered)`
+  added to `AnomalyDetector` using `ipaddress` module for uRPF-style check.
+- **Task 10 — ML Adaptive Baselines**: `services/baseline_service.py` with `BaselineService`
+  using `sklearn.ensemble.IsolationForest`; per-prefix rolling buffers in Redis;
+  shadow-mode when < `BASELINE_MIN_SAMPLES` samples. Config: `BASELINE_WINDOW_SIZE`,
+  `BASELINE_MIN_SAMPLES`.
+
+#### Tasks 11–30: Customer Portal, GDPR, Audit Export, Branding, Campaigns, Redis HA, K8s HPA/Network-Policies, Helm, Forecasting, RPKI
 - **Task 21 — Customer Self-Service Portal**: `routers/customer_router.py` with `/my-protection`,
   `/my-alerts`, `/my-reports`, `/my-settings` (GET/PUT). `CustomerSettings` model added.
   All endpoints scoped to `isp_id` from the authenticated user.
