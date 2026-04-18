@@ -141,7 +141,7 @@ The screenshots below show the redesigned enterprise-grade UI (dark navbar, colo
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/i4edubd/ddos-potection.git
+git clone https://github.com/lupael/ddos-potection.git
 cd ddos-potection
 ```
 
@@ -588,8 +588,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Need help? We're here for you!
 
 - 📖 [Documentation](project-docs/INDEX.md)
-- 🐛 [GitHub Issues](https://github.com/i4edubd/ddos-potection/issues)
-- 💬 [Discussions](https://github.com/i4edubd/ddos-potection/discussions)
+- 🐛 [GitHub Issues](https://github.com/lupael/ddos-potection/issues)
+- 💬 [Discussions](https://github.com/lupael/ddos-potection/discussions)
 - 📧 Email: support@ispbills.com
 
 ## 🙏 Acknowledgments
