@@ -182,7 +182,7 @@ async def readiness():
 async def metrics():
     """Prometheus metrics endpoint"""
     metrics_data = get_metrics_content()
-    return Response(content=metrics_data, media_type=CONTENT_TYPE_LATEST)
+    return Response(content=metrics_data, headers={"Content-Type": CONTENT_TYPE_LATEST})
 
 if __name__ == "__main__":
     uvicorn.run(
