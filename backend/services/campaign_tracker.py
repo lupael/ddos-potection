@@ -165,6 +165,7 @@ class CampaignTracker:
         return correlations
 
 
+def _infer_campaign_type(alert_type: str) -> str:
     volumetric = {"syn_flood", "udp_flood", "icmp_flood", "volumetric"}
     application = {"dns_amplification", "http_flood", "slowloris", "application"}
     if alert_type.lower() in volumetric:

@@ -5,6 +5,15 @@ All notable changes to the DDoS Protection Platform will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] — 2026-04-18
+
+### Fixed
+- **[Deps] `pytest` upgraded 7.4.3 → 8.3.5** (`backend/requirements.txt`): `pytest-asyncio==0.24.0` requires `pytest>=8.0`; the old pin caused an incompatibility error on `pytest` startup.
+- **[Deps] `bcrypt==4.0.1` pinned explicitly** (`backend/requirements.txt`): `passlib[bcrypt]==1.7.4` would resolve `bcrypt>=4.0.0` on fresh installs; bcrypt 4.1+ removed the `__about__` module and changed truncation-error handling, causing passlib's 72-char pre-check to misfire and surface a spurious "password exceeds 72-char bcrypt limit" error even for short passwords like `abcd1234`. Pinning to `4.0.1` (the last version with confirmed passlib 1.7.4 compatibility) restores correct behaviour.
+- **[Bug] `_infer_campaign_type` function missing in `campaign_tracker.py`** (`backend/services/campaign_tracker.py`): The function body was stranded as bare module-level code (no `def` statement), causing a `NameError`/`SyntaxError` on import → `campaign_router` failed to load → server would not start at `:8000`.
+
+---
+
 ## [1.3.1] — 2026-03-26
 
 ### Added

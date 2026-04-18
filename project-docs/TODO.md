@@ -16,6 +16,19 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
   - Fixed: `apply_iptables_rule`, `apply_nftables_rule`, `apply_rate_limit` now validate IP/CIDR
     with the `ipaddress` module before passing to subprocess; protocol names are allow-listed.
 
+- [x] **[Bug] `campaign_router.py` / `campaign_tracker.py` prevents server startup**
+  - File: `backend/services/campaign_tracker.py`
+  - Fixed: `_infer_campaign_type` function body was stranded as bare module-level code (missing `def` statement); caused `NameError` on import → server crashed on startup.
+
+- [x] **[Deps] pytest / pytest-asyncio version conflict**
+  - File: `backend/requirements.txt`
+  - Fixed: upgraded `pytest==7.4.3` → `pytest==8.3.5`; `pytest-asyncio==0.24.0` requires pytest ≥8.0.
+
+- [x] **[Deps] bcrypt >=4.1 incompatibility with passlib 1.7.4 ("72 character limit" error)**
+  - File: `backend/requirements.txt`
+  - Fixed: added explicit `bcrypt==4.0.1` pin; without it, `pip` installs bcrypt ≥4.1 on fresh setups, which breaks passlib's version detection and 72-char pre-check, causing a spurious error even for short passwords.
+
+
 - [x] **[Security] PCAP download path traversal**
   - File: `backend/routers/capture_router.py` — `GET /api/v1/capture/download/{file}`
   - Already fixed: path resolved and checked against capture directory.
