@@ -76,6 +76,9 @@ services:
       REDIS_PORT: 6379
       HOST: 0.0.0.0
       PORT: 8000
+      # Set ALLOWED_ORIGINS in .env to your server's address, e.g.:
+      #   ALLOWED_ORIGINS=http://YOUR_SERVER_IP:3000,http://localhost:3000
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000}
     ports:
       - "8000:8000"
     depends_on:
@@ -99,6 +102,7 @@ services:
       DATABASE_URL: postgresql://ddos_user:ddos_pass@postgres:5432/ddos_platform
       REDIS_HOST: redis-master
       REDIS_PORT: 6379
+      PYTHONPATH: /app
     ports:
       - "2055:2055/udp"  # NetFlow
       - "6343:6343/udp"  # sFlow
@@ -124,6 +128,7 @@ services:
       DATABASE_URL: postgresql://ddos_user:ddos_pass@postgres:5432/ddos_platform
       REDIS_HOST: redis-master
       REDIS_PORT: 6379
+      PYTHONPATH: /app
     depends_on:
       postgres:
         condition: service_healthy
@@ -142,7 +147,9 @@ services:
       dockerfile: Dockerfile
     container_name: ddos-frontend
     environment:
-      REACT_APP_API_URL: http://localhost:8000/api/v1
+      # Set REACT_APP_API_URL in .env to your server's address, e.g.:
+      #   REACT_APP_API_URL=http://YOUR_SERVER_IP:8000/api/v1
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000/api/v1}
     ports:
       - "3000:3000"
     depends_on:
