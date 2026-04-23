@@ -41,6 +41,21 @@ Legend: `[ ]` open · `[x]` done · `[~]` in-progress · `[!]` blocked
   - File: `backend/routers/capture_router.py` — `GET /api/v1/capture/download/{file}`
   - Already fixed: path resolved and checked against capture directory.
 
+- [x] **[Config] `ALLOWED_ORIGINS` env var broken for comma-separated strings**
+  - File: `backend/config.py`, `backend/main.py`
+  - Fixed: changed `ALLOWED_ORIGINS` from `List[str]` to `str`; added `allowed_origins_list`
+    property that parses both comma-separated and JSON array formats from `.env`.
+
+- [x] **[Docker] Collector & detector containers crash on startup (`ModuleNotFoundError`)**
+  - File: `docker-compose.yml`
+  - Fixed: added `PYTHONPATH: /app` to `collector` and `detector` environments so
+    `from database import SessionLocal` resolves when running `python services/*.py`.
+
+- [x] **[Docker] `REACT_APP_API_URL` / `ALLOWED_ORIGINS` not configurable from `.env`**
+  - Files: `docker-compose.yml`, `.env.example`, `backend/.env.example`
+  - Fixed: both values now use `${VAR:-default}` substitution in docker-compose; added
+    `REACT_APP_API_URL` to root `.env.example` with instructions for remote deployments.
+
 - [x] **[Infra] Add Alembic for database migrations**
   - `backend/alembic.ini`, `backend/alembic/env.py`, `backend/alembic/script.py.mako`
   - `backend/alembic/versions/001_initial_schema.py` creates all 13 tables with indexes

@@ -5,6 +5,22 @@ All notable changes to the DDoS Protection Platform will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] — 2026-04-23
+
+### Fixed
+- **[Config] `ALLOWED_ORIGINS` env var now accepts comma-separated strings** (`backend/config.py`):
+  pydantic-settings 2.x rejects non-JSON values for `List[str]` fields; changed the setting to a
+  plain `str` with a new `allowed_origins_list` property that parses both comma-separated and JSON
+  array formats from `.env`.
+- **[Docker] Collector/detector containers crash on startup** (`docker-compose.yml`):
+  `python services/traffic_collector.py` adds `/app/services` (not `/app`) to `sys.path`, so
+  `from database import SessionLocal` fails with `ModuleNotFoundError`. Added `PYTHONPATH: /app`
+  to collector and detector service environments.
+- **[Docker] `REACT_APP_API_URL` and `ALLOWED_ORIGINS` now configurable via `.env`**
+  (`docker-compose.yml`, `.env.example`): both values previously defaulted to `localhost` with no
+  indication that they should be changed for non-local deployments. They now use
+  `${VAR:-default}` substitution so users can set their server IP in `.env`.
+
 ## [1.3.3] — 2026-04-18
 
 ### Fixed

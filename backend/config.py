@@ -1,3 +1,5 @@
+import json as _json
+
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 from typing import List, Optional
@@ -91,12 +93,11 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     
-    # CORS
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000"
-    ]
+    # CORS — accepts a comma-separated string *or* a JSON array from the env.
+    # Examples:
+    #   ALLOWED_ORIGINS=http://localhost:3000,http://192.168.1.10:3000
+    #   ALLOWED_ORIGINS=["http://localhost:3000","http://192.168.1.10:3000"]
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000"
     
     # NetFlow/sFlow
     NETFLOW_PORT: int = 2055
@@ -368,5 +369,25 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        """Return ALLOWED_ORIGINS as a list.
+
+        Supports both comma-separated strings and JSON arrays so that
+        users can write either format in ``.env``::
+
+            ALLOWED_ORIGINS=http://localhost:3000,http://192.168.1.10:3000
+            ALLOWED_ORIGINS=["http://localhost:3000","http://192.168.1.10:3000"]
+        """
+        val = self.ALLOWED_ORIGINS.strip()
+        if val.startswith("["):
+            try:
+                parsed = _json.loads(val)
+                if isinstance(parsed, list):
+                    return [str(o).strip() for o in parsed if str(o).strip()]
+            except (ValueError, TypeError):
+                pass
+        return [o.strip() for o in val.split(",") if o.strip()]
 
 settings = Settings()
